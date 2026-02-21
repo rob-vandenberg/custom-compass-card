@@ -150,7 +150,7 @@ For issues and feature requests, please use the [GitHub Issues](https://github.c
 
 ### Screenshots
 
-| Default View | Sun Azimuth | Advanced Config |
+| Wind Bearing | Sun Azimuth | Advanced Config |
 | :---: | :---: | :---: |
 | ![Screenshot 1](screenshots/screenshot1.png) | ![Screenshot 2](screenshots/screenshot2.png) | ![Screenshot 3](screenshots/screenshot3.png) |
 
