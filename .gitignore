@@ -1,0 +1,7 @@
+# Project Scripts
+set_version.py
+release.bat
+
+# OS generated files
+.DS_Store
+Thumbs.db
