@@ -11,7 +11,7 @@ A fully configurable compass card for Home Assistant with dynamic fields and cus
 * Dual arrow modes (inward/outward)
 * Up to 3 configurable text fields with templates
 * Support for transparency in colors (#RRGGBBAA)
-* Responsive design that scales to card size
+* Fully responsive design that scales the compass to its container size
 
 ## Installation via HACS
 
@@ -24,7 +24,8 @@ A fully configurable compass card for Home Assistant with dynamic fields and cus
 6. Click "Add"
 
 ### Install the Card
-1. Find "Custom Compass Card" in HACS Frontend
+1. Open HACS in your Home Assistant
+1. Search for "Custom Compass Card"
 2. Click "Download"
 3. When asked to reload click "RELOAD"
 
