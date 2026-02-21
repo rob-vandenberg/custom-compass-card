@@ -15,7 +15,7 @@ A fully configurable compass card for Home Assistant with dynamic fields and cus
 
 ## Installation via HACS
 
-### Add as Custom Repository
+### Add Custom Repository
 1. Open HACS in your Home Assistant
 2. Click the three dots menu in the top right
 3. Select "Custom repositories"
