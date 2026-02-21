@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '2.2.21';
+const CARD_VERSION = '2.2.22';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -107,31 +107,36 @@ class CustomCompassCardEditor extends LitElement {
     const c = this._config;
 
     return html`
-      <div class="entity-header">
-        <span>Compass entity</span>
-      </div>
-
       <div class="entity-fields">
-        <ha-entity-picker
-          .hass=${this.hass}
-          .value=${c.compass_entity ?? ''}
-          .includeDomains=${['sensor']}
-          allow-custom-entity
-          @value-changed=${e => this._valueChanged('compass_entity', e)}
-        ></ha-entity-picker>
-        <ha-textfield
-          label="Attribute (optional)"
-          .value=${c.compass_attribute ?? ''}
-          placeholder="e.g., azimuth"
-          @input=${e => this._valueChanged('compass_attribute', e)}
-        ></ha-textfield>
-        <ha-textfield
-          label="Adjustment (°)"
-          type="number"
-          step="1"
-          .value=${String(c.compass_adjustment ?? 0)}
-          @input=${e => this._valueChanged('compass_adjustment', e)}
-        ></ha-textfield>
+        <div class="text-field">
+          <label>Compass entity</label>
+          <ha-entity-picker
+            .hass=${this.hass}
+            .value=${c.compass_entity ?? ''}
+            .includeDomains=${['sensor']}
+            allow-custom-entity
+            @value-changed=${e => this._valueChanged('compass_entity', e)}
+          ></ha-entity-picker>
+        </div>
+        
+        <div class="text-field">
+          <label>Attribute</label>
+          <ha-textfield
+            .value=${c.compass_attribute ?? ''}
+            @input=${e => this._valueChanged('compass_attribute', e)}
+          ></ha-textfield>
+        </div>
+        
+        <div class="text-field">
+          <label>Adjustment</label>
+          <ha-textfield
+            type="number"
+            step="1"
+            .value=${String(c.compass_adjustment ?? 0)}
+            @input=${e => this._valueChanged('compass_adjustment', e)}
+          ></ha-textfield>
+        </div>
+        
       </div>
 
       <div class="styling-grid">
@@ -351,36 +356,9 @@ class CustomCompassCardEditor extends LitElement {
       padding: 16px;
     }
     
-    .entity-header {
-      display: grid;
-      grid-template-columns: 1fr;
-      margin-top: 0px;
-      margin-left: 5px;
-      margin-bottom: 3px;
-      gap: 8px;
-    }
-
-    .compass-header {
-      display: grid;
-      grid-template-columns: 1fr;
-      margin-top: 25px;
-      margin-left: 5px;
-      margin-bottom: 3px;
-      gap: 8px;
-    }
-
-    .arrow-header {
-      display: grid;
-      grid-template-columns: 1fr;
-      margin-top: 20px;
-      margin-left: 5px;
-      margin-bottom: 3px;
-      gap: 8px;
-    }
-
     .entity-fields {
       display: grid;
-      grid-template-columns: 4fr 3fr 2fr;
+      grid-template-columns: 3fr 2fr 2fr;
       gap: 8px;
     }
 
