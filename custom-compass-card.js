@@ -1,11 +1,12 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '2.2.20';
+const CARD_VERSION = '2.2.21';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
-  compass_entity: 'sensor.wind_bearing',
+  compass_entity: 'sun.sun',
+  compass_attribute: 'azimuth',
   compass_adjustment: 0,
   background_color: '#101010',
   circle_width: 16,
@@ -30,7 +31,7 @@ const DEFAULT_CONFIG = {
   field_2_unit_fontsize: 1.2,
   field_2_unit_fontcolor: '#8C8C8C',
   field_3_show: true,
-  field_3_template: "{{ states('sensor.ws_wind_direction') | round(0) }}",
+  field_3_template: "{{ state_attr('sun.sun', 'azimuth') | round(0) }}",
   field_3_unit: '°',
   field_3_fontsize: 1.4,
   field_3_fontcolor: '#808080',
@@ -119,7 +120,13 @@ class CustomCompassCardEditor extends LitElement {
           @value-changed=${e => this._valueChanged('compass_entity', e)}
         ></ha-entity-picker>
         <ha-textfield
-          label="Bearing Adjustment (°)"
+          label="Attribute (optional)"
+          .value=${c.compass_attribute ?? ''}
+          placeholder="e.g., azimuth"
+          @input=${e => this._valueChanged('compass_attribute', e)}
+        ></ha-textfield>
+        <ha-textfield
+          label="Adjustment (°)"
           type="number"
           step="1"
           .value=${String(c.compass_adjustment ?? 0)}
@@ -373,7 +380,7 @@ class CustomCompassCardEditor extends LitElement {
 
     .entity-fields {
       display: grid;
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 4fr 3fr 2fr;
       gap: 8px;
     }
 
@@ -502,22 +509,32 @@ class CustomCompassCard extends LitElement {
 
     const stateObj = this.hass.states[this.config.compass_entity];
     if (stateObj) {
-      const raw = parseFloat(stateObj.state);
+      let valueToParse = stateObj.state; // Default to state
+      const attr = this.config.compass_attribute;
+
+      // Check if attribute is defined and not just whitespace
+      if (attr && typeof attr === 'string' && attr.trim() !== '') {
+        const attrValue = stateObj.attributes[attr.trim()];
+        
+        // Only use the attribute value if it is actually a number
+        if (attrValue !== null && !isNaN(parseFloat(attrValue))) {
+          valueToParse = attrValue;
+        }
+      }
+
+      const raw = parseFloat(valueToParse);
+      
       if (!isNaN(raw)) {
         const adj = parseFloat(this.config.compass_adjustment) || 0;
         this._degrees = ((raw + adj) % 360 + 360) % 360;
-        this._error   = false;
+        this._error = false;
       } else {
-        console.warn(`CustomCompassCard: "${this.config.compass_entity}" state is not a number.`);
         this._degrees = 0;
-        this._error   = true;
+        this._error = true;
       }
-    } else {
-      console.warn(`CustomCompassCard: Entity "${this.config.compass_entity}" not found.`);
-      this._degrees = 0;
-      this._error   = true;
     }
 
+    // Update the three display fields
     for (const i of [1, 2, 3]) {
       if (!this.config[`field_${i}_show`]) {
         this[`_field${i}Value`] = '';
@@ -723,6 +740,13 @@ class CustomCompassCard extends LitElement {
 }
 
 customElements.define('custom-compass-card', CustomCompassCard);
+
+// Log version info
+console.info(
+  `%c CUSTOM-COMPASS-CARD %c v${CARD_VERSION} `,
+  'background-color: #29b6cf; color: #fff; font-weight: bold; padding: 2px 4px; border-radius: 3px 0 0 3px;',
+  'background-color: #1e1e1e; color: #fff; font-weight: bold; padding: 2px 4px; border-radius: 0 3px 3px 0;'
+);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
