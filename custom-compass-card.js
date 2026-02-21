@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '2.2.37';
+const CARD_VERSION = '2.2.41';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -663,7 +663,6 @@ class CustomCompassCard extends LitElement {
       background-color: var(--cc-bg-color, #111111);
       border: var(--cc-circle-border-width, 15px) solid var(--cc-circle-color, #333333);
       box-sizing: border-box;
-      z-index: 0;
       font-size: var(--cc-font-size, 1em);
     }
     .compass-arrow-wrapper {
@@ -682,7 +681,6 @@ class CustomCompassCard extends LitElement {
       width: 0; height: 0;
       border-left:   var(--cc-arrow-border-left,   3px solid transparent);
       border-right:  var(--cc-arrow-border-right,  3px solid transparent);
-      z-index: 1;
     }
     .compass-arrow.outward {
       top: 0px;
@@ -697,7 +695,7 @@ class CustomCompassCard extends LitElement {
       left: 0;
       width: 100%;
       text-align: center;
-      z-index: 10;
+      z-index: 100;
       line-height: 1.15;
       display: flex;
       justify-content: center;
