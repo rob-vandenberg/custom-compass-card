@@ -87,6 +87,7 @@ field_3_unit_fontcolor: '#606060'
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `compass_entity` | string | **Required** | Entity ID for compass direction (0-360 degrees) |
+| `compass_attribute` | string | `''` | Optional attribute name to use instead of entity state (e.g., 'azimuth' for sun.sun) |
 | `compass_adjustment` | number | `0` | Bearing adjustment in degrees |
 | `background_color` | string | `'#101010'` | Background color (supports #RRGGBBAA) |
 | `circle_color` | string | `'#383838'` | Border color |
@@ -120,6 +121,25 @@ field_2_template: "{{ states('sensor.wind_speed') | round(1) }}"
 ```yaml
 field_3_template: "{{ (states('sensor.wind_bearing') | float / 10) | round(0) }}"
 ```
+
+### Using Entity Attributes
+
+**Example: Sun azimuth (angle from north)**
+```yaml
+type: custom:custom-compass-card
+compass_entity: sun.sun
+compass_attribute: azimuth
+```
+
+**Example: Weather wind direction attribute**
+```yaml
+type: custom:custom-compass-card
+compass_entity: weather.home
+compass_attribute: wind_bearing
+```
+
+Leave `compass_attribute` empty to use the entity's state value directly.
+
 
 ## Support
 
