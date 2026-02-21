@@ -107,7 +107,7 @@ class CustomCompassCardEditor extends LitElement {
 
     return html`
       <div class="entity-header">
-        <span>Direction entity</span>
+        <span>Compass entity</span>
       </div>
 
       <div class="entity-fields">
@@ -127,15 +127,10 @@ class CustomCompassCardEditor extends LitElement {
         ></ha-textfield>
       </div>
 
-
-      <div class="compass-header">
-        <span>Compass style</span>
-      </div>
-
       <div class="styling-grid">
         ${this._colorPicker('background_color', 'Background Color')}
         ${this._colorPicker('circle_color', 'Border Color')}
-        <div class="number-field">
+        <div class="text-field">
           <label>Border Width (px)</label>
           <ha-textfield
             type="number"
@@ -147,14 +142,9 @@ class CustomCompassCardEditor extends LitElement {
         </div>
       </div>
       
-
-      <div class="arrow-header">
-        <span>Arrow style</span>
-      </div>
-
       <div class="styling-grid">
         ${this._colorPicker('arrow_color', 'Arrow Color')}
-        <div class="number-field">
+        <div class="text-field">
           <label>Arrow Height (px)</label>
           <ha-textfield
             type="number"
@@ -164,7 +154,7 @@ class CustomCompassCardEditor extends LitElement {
             @input=${e => this._valueChanged('arrow_height', e)}
           ></ha-textfield>
         </div>
-        <div class="number-field">
+        <div class="text-field">
           <label>Arrow Width (px)</label>
           <ha-textfield
             type="number"
@@ -205,34 +195,42 @@ class CustomCompassCardEditor extends LitElement {
       </div>
 
       <div class="field-grid">
-        <ha-textfield
-          label="Template"
-          .value=${c.field_1_template ?? ''}
-          @input=${e => this._valueChanged('field_1_template', e)}
-        ></ha-textfield>
-        <ha-textfield
-          label="Font Size (em)"
-          type="number"
-          step="0.1"
-          .value=${String(c.field_1_fontsize ?? 1.4)}
-          @input=${e => this._valueChanged('field_1_fontsize', e)}
-        ></ha-textfield>
+        <div class="text-field">
+          <label>Field 1 template</label>
+          <ha-textfield
+            .value=${c.field_1_template ?? ''}
+            @input=${e => this._valueChanged('field_1_template', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Font size (em)</label>
+          <ha-textfield
+            type="number"
+            step="0.1"
+            .value=${String(c.field_1_fontsize ?? 1.4)}
+            @input=${e => this._valueChanged('field_1_fontsize', e)}
+          ></ha-textfield>
+        </div>
         ${this._colorPicker('field_1_fontcolor', 'Font Color')}
       </div>
 
       <div class="field-grid">
-        <ha-textfield
-          label="Unit"
-          .value=${c.field_1_unit ?? ''}
-          @input=${e => this._valueChanged('field_1_unit', e)}
-        ></ha-textfield>
-        <ha-textfield
-          label="Unit Size (em)"
-          type="number"
-          step="0.1"
-          .value=${String(c.field_1_unit_fontsize ?? 0.84)}
-          @input=${e => this._valueChanged('field_1_unit_fontsize', e)}
-        ></ha-textfield>
+        <div class="text-field">
+          <label>Field 1 unit</label>
+          <ha-textfield
+            .value=${c.field_1_unit ?? ''}
+            @input=${e => this._valueChanged('field_1_unit', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Unit size (em)</label>
+          <ha-textfield
+            type="number"
+            step="0.1"
+            .value=${String(c.field_1_unit_fontsize ?? 0.84)}
+            @input=${e => this._valueChanged('field_1_unit_fontsize', e)}
+          ></ha-textfield>
+        </div>
         ${this._colorPicker('field_1_unit_fontcolor', 'Unit Color')}
       </div>
 
@@ -248,34 +246,42 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       
       <div class="field-grid">
-        <ha-textfield
-          label="Template"
-          .value=${c.field_2_template ?? ''}
-          @input=${e => this._valueChanged('field_2_template', e)}
-        ></ha-textfield>
-        <ha-textfield
-          label="Font Size (em)"
-          type="number"
-          step="0.1"
-          .value=${String(c.field_2_fontsize ?? 1.4)}
-          @input=${e => this._valueChanged('field_2_fontsize', e)}
-        ></ha-textfield>
+        <div class="text-field">
+          <label>Field 2 template</label>
+          <ha-textfield
+            .value=${c.field_2_template ?? ''}
+            @input=${e => this._valueChanged('field_2_template', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Font size (em)</label>
+          <ha-textfield
+            type="number"
+            step="0.1"
+            .value=${String(c.field_2_fontsize ?? 1.4)}
+            @input=${e => this._valueChanged('field_2_fontsize', e)}
+          ></ha-textfield>
+        </div>
         ${this._colorPicker('field_2_fontcolor', 'Font Color')}
       </div>
       
       <div class="field-grid">
-        <ha-textfield
-          label="Unit"
-          .value=${c.field_2_unit ?? ''}
-          @input=${e => this._valueChanged('field_2_unit', e)}
-        ></ha-textfield>
-        <ha-textfield
-          label="Unit Size (em)"
-          type="number"
-          step="0.1"
-          .value=${String(c.field_2_unit_fontsize ?? 0.84)}
-          @input=${e => this._valueChanged('field_2_unit_fontsize', e)}
-        ></ha-textfield>
+        <div class="text-field">
+          <label>Field 2 unit</label>
+          <ha-textfield
+            .value=${c.field_2_unit ?? ''}
+            @input=${e => this._valueChanged('field_2_unit', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Unit size (em)</label>
+          <ha-textfield
+            type="number"
+            step="0.1"
+            .value=${String(c.field_2_unit_fontsize ?? 0.84)}
+            @input=${e => this._valueChanged('field_2_unit_fontsize', e)}
+          ></ha-textfield>
+        </div>
         ${this._colorPicker('field_2_unit_fontcolor', 'Unit Color')}
       </div>
 
@@ -291,34 +297,42 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       
       <div class="field-grid">
-        <ha-textfield
-          label="Template"
-          .value=${c.field_3_template ?? ''}
-          @input=${e => this._valueChanged('field_3_template', e)}
-        ></ha-textfield>
-        <ha-textfield
-          label="Font Size (em)"
-          type="number"
-          step="0.1"
-          .value=${String(c.field_3_fontsize ?? 1.4)}
-          @input=${e => this._valueChanged('field_3_fontsize', e)}
-        ></ha-textfield>
+        <div class="text-field">
+          <label>Field 3 template</label>
+          <ha-textfield
+            .value=${c.field_3_template ?? ''}
+            @input=${e => this._valueChanged('field_3_template', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Font size (em)</label>
+          <ha-textfield
+            type="number"
+            step="0.1"
+            .value=${String(c.field_3_fontsize ?? 1.4)}
+            @input=${e => this._valueChanged('field_3_fontsize', e)}
+          ></ha-textfield>
+        </div>
         ${this._colorPicker('field_3_fontcolor', 'Font Color')}
       </div>
       
       <div class="field-grid">
-        <ha-textfield
-          label="Unit"
-          .value=${c.field_3_unit ?? ''}
-          @input=${e => this._valueChanged('field_3_unit', e)}
-        ></ha-textfield>
-        <ha-textfield
-          label="Unit Size (em)"
-          type="number"
-          step="0.1"
-          .value=${String(c.field_3_unit_fontsize ?? 0.84)}
-          @input=${e => this._valueChanged('field_3_unit_fontsize', e)}
-        ></ha-textfield>
+        <div class="text-field">
+          <label>Field 3 unit</label>
+          <ha-textfield
+            .value=${c.field_3_unit ?? ''}
+            @input=${e => this._valueChanged('field_3_unit', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Unit size (em)</label>
+          <ha-textfield
+            type="number"
+            step="0.1"
+            .value=${String(c.field_3_unit_fontsize ?? 0.84)}
+            @input=${e => this._valueChanged('field_3_unit_fontsize', e)}
+          ></ha-textfield>
+        </div>
         ${this._colorPicker('field_3_unit_fontcolor', 'Unit Color')}
       </div>
     `;
@@ -367,15 +381,16 @@ class CustomCompassCardEditor extends LitElement {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
+      margin-top: 24px;
       margin-bottom: 16px;
     }
 
-    .number-field {
+    .text-field {
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
-    .number-field label {
+    .text-field label {
       font-size: 12px;
       font-weight: 600;
       color: var(--secondary-text-color);
@@ -396,18 +411,16 @@ class CustomCompassCardEditor extends LitElement {
       gap: 8px;
       align-items: center;
       background-color: var(--input-fill-color, #1e1e1e);
-      border: 1px solid var(--input-outlined-idle-border-color, #444);
-      border-radius: 4px;
-      padding: 4px 8px;
+      border-radius: 4px 4px 0 0;
+      padding-left: 8px;
     }
     .color-row input[type="color"] {
-      width: 36px;
-      height: 36px;
+      width: 24px;
+      height: 40px;
       border: none;
-      border-radius: 4px;
+      border-radius: 4px 4px 0 0;
       background: transparent;
       cursor: pointer;
-      padding: 0;
       flex-shrink: 0;
     }
     .color-row ha-textfield {
@@ -426,8 +439,7 @@ class CustomCompassCardEditor extends LitElement {
     }
     .arrow-toggles label {
       font-size: 14px;
-      margin-left: 4px;
-      margin-right: 8px;
+      margin-right: 12px;
     }
 
     .field-toggle {
@@ -437,15 +449,14 @@ class CustomCompassCardEditor extends LitElement {
     }
     .field-toggle label {
       font-size: 14px;
-      margin-left: 4px;
-      margin-right: 8px;
+      margin-right: 12px;
     }
 
     .field-grid {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
+      grid-template-columns: 4fr 2fr 3fr;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-top: 16px;
     }
 
     ha-entity-picker,
@@ -712,13 +723,6 @@ class CustomCompassCard extends LitElement {
 }
 
 customElements.define('custom-compass-card', CustomCompassCard);
-
-// Log version info
-console.info(
-  `%c CUSTOM-COMPASS-CARD %c v${CARD_VERSION} `,
-  'background-color: #29b6cf; color: #fff; font-weight: bold; padding: 2px 4px; border-radius: 3px 0 0 3px;',
-  'background-color: #1e1e1e; color: #fff; font-weight: bold; padding: 2px 4px; border-radius: 0 3px 3px 0;'
-);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
