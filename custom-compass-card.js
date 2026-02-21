@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '2.2.22';
+const CARD_VERSION = '2.2.37';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -14,8 +14,9 @@ const DEFAULT_CONFIG = {
   arrow_width: 3,
   arrow_height: 16,
   arrow_color: '#E0E0E0',
-  arrow_outward: true,
-  arrow_inward: false,
+  arrow_show: true,
+  arrow_invert: false,
+  arrow_rotate: false,
   field_1_show: true,
   field_1_template: '${compass_direction}',
   field_1_unit: '',
@@ -180,17 +181,24 @@ class CustomCompassCardEditor extends LitElement {
 
       <div class="arrow-toggles">
         <ha-formfield>
-          <label>Show outward arrow</label>
+          <label>Show arrow</label>
           <ha-switch
-            .checked=${c.arrow_outward}
-            @change=${e => this._valueChanged('arrow_outward', e)}
+            .checked=${c.arrow_show}
+            @change=${e => this._valueChanged('arrow_show', e)}
           ></ha-switch>
         </ha-formfield>
         <ha-formfield>
-          <label>Show inward arrow</label>
+          <label>Invert arrow</label>
           <ha-switch
-            .checked=${c.arrow_inward}
-            @change=${e => this._valueChanged('arrow_inward', e)}
+            .checked=${c.arrow_invert}
+            @change=${e => this._valueChanged('arrow_invert', e)}
+          ></ha-switch>
+        </ha-formfield>
+        <ha-formfield>
+          <label>Rotate arrow</label>
+          <ha-switch
+            .checked=${c.arrow_rotate}
+            @change=${e => this._valueChanged('arrow_rotate', e)}
           ></ha-switch>
         </ha-formfield>
       </div>
@@ -417,7 +425,7 @@ class CustomCompassCardEditor extends LitElement {
 
     .arrow-toggles {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
       margin-top: 20px;
       margin-bottom: 15px;
@@ -549,26 +557,18 @@ class CustomCompassCard extends LitElement {
     this.style.setProperty('--cc-circle-color', this.config.circle_color || 'var(--divider-color)');
     this.style.setProperty('--cc-bg-color', this.config.background_color || 'var(--primary-background-color)');
 
-    // Set arrow CSS variables for both types
+    // Set arrow CSS variables
     const initW = parseFloat(this.config.arrow_width)  || 3;
     const initH = parseFloat(this.config.arrow_height) || 17;
     const color = this.config.arrow_color || 'var(--primary-text-color)';
 
     const scaledW   = initW   * scale;
     const scaledH   = initH   * scale;
-    const scaledTop = -initBorder * scale;
 
-    // Shared properties for both arrows
     this.style.setProperty('--cc-arrow-border-left',   `${scaledW}px solid transparent`);
     this.style.setProperty('--cc-arrow-border-right',  `${scaledW}px solid transparent`);
-    this.style.setProperty('--cc-arrow-top',           `${scaledTop}px`);
-    this.style.setProperty('--cc-arrow-bottom',        `${scaledTop}px`);
-    
-    // Outward arrow (tip at outer edge, uses border-top)
-    this.style.setProperty('--cc-arrow-outward-border', `${scaledH}px solid ${color}`);
-    
-    // Inward arrow (base at outer edge, uses border-top)
-    this.style.setProperty('--cc-arrow-inward-border', `${scaledH}px solid ${color}`);
+    this.style.setProperty('--cc-arrow-border',        `${scaledH}px solid ${color}`);
+    this.style.setProperty('--cc-arrow-height',        `${scaledH}px`);
   }
 
   async _evaluateTemplate(template, degrees) {
@@ -603,7 +603,11 @@ class CustomCompassCard extends LitElement {
 
   render() {
     const c   = this.config || {};
-    const rot = `rotate(${this._degrees}deg)`;
+    
+    // Calculate wrapper rotation (arrow_rotate toggle)
+    const baseRotation = this._degrees;
+    const wrapperRotation = c.arrow_rotate ? baseRotation + 180 : baseRotation;
+    const wrapperTransform = `rotate(${wrapperRotation}deg)`;
 
     const renderField = (n, val) => {
       if (!c[`field_${n}_show`]) return html``;
@@ -619,13 +623,14 @@ class CustomCompassCard extends LitElement {
       <ha-card>
         <div class="compass-container">
           <div class="compass-circle">
-            <div class="compass-arrow-wrapper" style="transform:${rot}">
-              ${c.arrow_inward ? html`<div class="compass-arrow-inward"></div>` : ''}
-              ${c.arrow_outward ? html`<div class="compass-arrow-outward"></div>` : ''}
-            </div>
             ${renderField(1, this._field1Value)}
             ${renderField(2, this._field2Value)}
             ${renderField(3, this._field3Value)}
+          </div>
+          <div class="compass-arrow-wrapper" style="transform:${wrapperTransform}">
+            ${c.arrow_show ? html`
+              <div class="compass-arrow ${c.arrow_invert ? 'inward' : 'outward'}"></div>
+            ` : ''}
           </div>
         </div>
       </ha-card>
@@ -663,31 +668,29 @@ class CustomCompassCard extends LitElement {
     }
     .compass-arrow-wrapper {
       position: absolute;
-      width: 100%; height: 100%;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 1;
+      z-index: 2;
     }
-    .compass-arrow-outward {
+    .compass-arrow {
       position: absolute;
       width: 0; height: 0;
       border-left:   var(--cc-arrow-border-left,   3px solid transparent);
       border-right:  var(--cc-arrow-border-right,  3px solid transparent);
-      border-top:    var(--cc-arrow-outward-border, 27px solid #e0e0e0);
-      transform-origin: 50% 100%;
-      bottom: var(--cc-arrow-bottom, -18px);
       z-index: 1;
     }
-    .compass-arrow-inward {
-      position: absolute;
-      width: 0; height: 0;
-      border-left:   var(--cc-arrow-border-left,   3px solid transparent);
-      border-right:  var(--cc-arrow-border-right,  3px solid transparent);
-      border-top:    var(--cc-arrow-inward-border,  27px solid #e0e0e0);
-      transform-origin: 50% 0%;
-      top: var(--cc-arrow-top, -18px);
-      z-index: 1;
+    .compass-arrow.outward {
+      top: 0px;
+      border-bottom: var(--cc-arrow-border, 27px solid #e0e0e0);
+    }
+    .compass-arrow.inward {
+      top: 0px;
+      border-top: var(--cc-arrow-border, 27px solid #e0e0e0);
     }
     .field {
       position: absolute;

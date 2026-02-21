@@ -8,7 +8,8 @@ A fully configurable compass card for Home Assistant with dynamic fields and cus
 
 ## Features
 * Customizable compass with adjustable colors and sizes
-* Dual arrow modes (inward/outward)
+* Support for entity attributes (e.g., sun.sun azimuth)
+* Configurable arrow with rotation and positioning options
 * Up to 3 configurable text fields with templates
 * Support for transparency in colors (#RRGGBBAA)
 * Fully responsive design that scales the compass to its container size
@@ -49,7 +50,8 @@ Add the card to your Lovelace dashboard:
 
 ```yaml
 type: custom:custom-compass-card
-compass_entity: sensor.wind_bearing
+compass_entity: sun.sun
+compass_attribute: 'azimuth'
 compass_adjustment: 0
 background_color: '#101010'
 circle_color: '#383838'
@@ -57,8 +59,9 @@ circle_width: 16
 arrow_color: '#E0E0E0'
 arrow_width: 3
 arrow_height: 16
-arrow_outward: true
-arrow_inward: false
+arrow_show: true
+arrow_invert: false
+arrow_rotate: false
 field_1_show: true
 field_1_template: '${compass_direction}'
 field_1_unit: ''
@@ -95,8 +98,9 @@ field_3_unit_fontcolor: '#606060'
 | `arrow_color` | string | `'#E0E0E0'` | Arrow color (supports transparency) |
 | `arrow_width` | number | `3` | Arrow width in pixels |
 | `arrow_height` | number | `16` | Arrow height in pixels |
-| `arrow_outward` | boolean | `true` | Show outward-pointing arrow |
-| `arrow_inward` | boolean | `false` | Show inward-pointing arrow |
+| `arrow_show` | boolean | `true` | Show or hide the arrow |
+| `arrow_invert` | boolean | `false` | Invert arrow direction (outward ↔ inward) |
+| `arrow_rotate` | boolean | `false` | Rotate arrow 180° (position on opposite side) |
 | `field_N_show` | boolean | `true` | Show field N (1, 2, or 3) |
 | `field_N_template` | string | - | Jinja2 template or `${compass_direction}` |
 | `field_N_unit` | string | - | Unit text to display |
