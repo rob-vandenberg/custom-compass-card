@@ -148,6 +148,13 @@ If you find this card useful, please star the repository!
 For issues and feature requests, please use the [GitHub Issues](https://github.com/rob-vandenberg/custom-compass-card/issues) page.
 
 
+### Screenshots
+
+| Default View | Sun Azimuth | Advanced Config |
+| :---: | :---: | :---: |
+| ![Screenshot 1](screenshots/screenshot1.png) | ![Screenshot 2](screenshots/screenshot2.png) | ![Screenshot 3](screenshots/screenshot3.png) |
+
+
 ## License
 
 MIT License - see LICENSE file for details.
