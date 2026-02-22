@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '2.5.17';
+const CARD_VERSION = '2.5.19';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -613,16 +613,17 @@ class CustomCompassCard extends LitElement {
     // Set arrow CSS variables
     const initW = parseFloat(this.config.arrow_width)  || 3;
     const initH = parseFloat(this.config.arrow_height) || 17;
+    const initPos = parseFloat(this.config.arrow_position) || 0;
     const color = this.config.arrow_color || '#E0E0E0';
 
     const scaledW   = initW   * scale;
     const scaledH   = initH   * scale;
-    const arrowPos  = parseFloat(this.config.arrow_position) || 0;
+    const scaledPos = initPos * scale;
 
     this.style.setProperty('--cc-arrow-width',     `${scaledW}px`);
     this.style.setProperty('--cc-arrow-height',    `${scaledH}px`);
     this.style.setProperty('--cc-arrow-color',     color);
-    this.style.setProperty('--cc-arrow-position',  `${arrowPos}px`);
+    this.style.setProperty('--cc-arrow-position',  `${scaledPos}px`);
   }
 
   async _evaluateTemplate(template, degrees) {
@@ -862,10 +863,10 @@ class CustomCompassCard extends LitElement {
     }
     .compass-arrow-wrapper {
       position: absolute;
-      top: 8%;
-      left: 8%;
-      right: 8%;
-      bottom: 8%;
+      top: calc(8% - var(--cc-border-size, 0px));
+      left: calc(8% - var(--cc-border-size, 0px));
+      right: calc(8% - var(--cc-border-size, 0px));
+      bottom: calc(8% - var(--cc-border-size, 0px));
       display: flex;
       justify-content: center;
       align-items: center;
