@@ -9,6 +9,7 @@ A fully configurable compass card for Home Assistant with dynamic fields and cus
 ## Features
 * Customizable compass with adjustable colors and sizes
 * Support for entity attributes (e.g., sun.sun azimuth)
+* **Morphing arrow shapes** - create triangles, arrows, squares, kites, and circles with parametric control
 * Configurable arrow with rotation and positioning options
 * Up to 3 configurable text fields with templates
 * Support for transparency in colors (#RRGGBBAA)
@@ -61,6 +62,8 @@ arrow_color: '#E0E0E0'
 arrow_width: 3
 arrow_height: 16
 arrow_position: 0
+arrow_morph: 0
+arrow_curve: 0
 arrow_show: true
 arrow_invert: false
 arrow_rotate: false
@@ -102,6 +105,8 @@ field_3_unit_fontcolor: '#606060'
 | `arrow_width` | number | `3` | Arrow width in pixels |
 | `arrow_height` | number | `16` | Arrow height in pixels |
 | `arrow_position` | number | `0` | Arrow position offset in pixels (positive=outward, negative=inward) |
+| `arrow_morph` | number | `0` | Arrow shape morph (-100 to +∞, see Arrow Morphing section) |
+| `arrow_curve` | number | `0` | Edge curvature amount (0=straight edges, higher=more curved) |
 | `arrow_show` | boolean | `true` | Show or hide the arrow |
 | `arrow_invert` | boolean | `false` | Invert arrow direction (outward ↔ inward) |
 | `arrow_rotate` | boolean | `false` | Rotate arrow 180° (position on opposite side) |
@@ -112,6 +117,50 @@ field_3_unit_fontcolor: '#606060'
 | `field_N_fontcolor` | string | - | Font color (supports transparency) |
 | `field_N_unit_fontsize` | number | - | Unit font size in em |
 | `field_N_unit_fontcolor` | string | - | Unit font color |
+
+### Arrow Morphing
+
+The arrow shape is controlled by two powerful parameters that work together to create a wide variety of shapes:
+
+#### arrow_morph
+Controls the position of the bottom-center point, transforming the arrow shape:
+
+- **`morph = 0`** (default): Triangle - bottom-center point on the baseline
+- **`morph = -100`**: Arrow with notch - bottom-center point pulled inward (Pac-Man style)
+- **`morph = 100`**: Perfect square (when `width = height`)
+- **`morph > 100`**: Kite shape - bottom-center point extends outward
+
+**Range:** -100 to +∞ (negative creates notches, positive creates kites)
+
+#### arrow_curve
+Controls the curvature of all edges using cubic Bezier curves:
+
+- **`curve = 0`** (default): Straight edges
+- **`curve = 10-30`**: Rounded corners
+- **`curve = 36`**: Perfect circle (when `width = height` and `morph = 100`)
+- **`curve = 50+`**: Heavy curves, crescent shapes
+
+**Range:** 0 to ~100 (higher values = more curvature)
+
+#### Shape Examples
+
+| Configuration | Result |
+|--------------|--------|
+| `morph: 0, curve: 0` | Sharp triangle |
+| `morph: 0, curve: 20` | Rounded triangle |
+| `morph: -20, curve: 0` | Arrow with sharp notch |
+| `morph: -20, curve: 30` | Arrow with rounded notch |
+| `morph: 100, curve: 0` | Sharp square/diamond (when width=height) |
+| `morph: 100, curve: 36` | Perfect circle (when width=height) |
+| `morph: 50, curve: 15` | Rounded kite shape |
+
+**Pro tip:** To create a perfect circle:
+```yaml
+arrow_width: 100
+arrow_height: 100
+arrow_morph: 100
+arrow_curve: 36
+```
 
 ### Template Examples
 

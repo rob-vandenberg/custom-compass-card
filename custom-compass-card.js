@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '2.3.5';
+const CARD_VERSION = '2.5.16';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -16,6 +16,8 @@ const DEFAULT_CONFIG = {
   arrow_height: 16,
   arrow_color: '#E0E0E0',
   arrow_position: 0,
+  arrow_morph: 0,
+  arrow_curve: 0,
   arrow_show: true,
   arrow_invert: false,
   arrow_rotate: false,
@@ -195,6 +197,27 @@ class CustomCompassCardEditor extends LitElement {
             step="1"
             .value=${String(c.arrow_position ?? 0)}
             @input=${e => this._valueChanged('arrow_position', e)}
+          ></ha-textfield>
+        </div>
+      </div>
+
+      <div class="arrow-styling-grid">
+        <div class="text-field">
+          <label>Arrow morph</label>
+          <ha-textfield
+            type="number"
+            step="1"
+            .value=${String(c.arrow_morph ?? 0)}
+            @input=${e => this._valueChanged('arrow_morph', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Arrow curve</label>
+          <ha-textfield
+            type="number"
+            step="1"
+            .value=${String(c.arrow_curve ?? 0)}
+            @input=${e => this._valueChanged('arrow_curve', e)}
           ></ha-textfield>
         </div>
       </div>
@@ -590,17 +613,16 @@ class CustomCompassCard extends LitElement {
     // Set arrow CSS variables
     const initW = parseFloat(this.config.arrow_width)  || 3;
     const initH = parseFloat(this.config.arrow_height) || 17;
-    const color = this.config.arrow_color || 'var(--primary-text-color)';
+    const color = this.config.arrow_color || '#E0E0E0';
 
     const scaledW   = initW   * scale;
     const scaledH   = initH   * scale;
     const arrowPos  = parseFloat(this.config.arrow_position) || 0;
 
-    this.style.setProperty('--cc-arrow-border-left',   `${scaledW}px solid transparent`);
-    this.style.setProperty('--cc-arrow-border-right',  `${scaledW}px solid transparent`);
-    this.style.setProperty('--cc-arrow-border',        `${scaledH}px solid ${color}`);
-    this.style.setProperty('--cc-arrow-height',        `${scaledH}px`);
-    this.style.setProperty('--cc-arrow-position',      `${arrowPos}px`);
+    this.style.setProperty('--cc-arrow-width',     `${scaledW}px`);
+    this.style.setProperty('--cc-arrow-height',    `${scaledH}px`);
+    this.style.setProperty('--cc-arrow-color',     color);
+    this.style.setProperty('--cc-arrow-position',  `${arrowPos}px`);
   }
 
   async _evaluateTemplate(template, degrees) {
@@ -617,6 +639,121 @@ class CustomCompassCard extends LitElement {
   getCompassDirection(degrees) {
     const dirs  = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
     return dirs[Math.floor((degrees + 11.25) / 22.5) % 16];
+  }
+
+  _buildArrowPath(morph, curve, width, height) {
+    // Base coordinate system is 100×100 for a square
+    // P1-P3 distance = 100, P2-P4 distance = 100
+    const points = [
+      { x: 50, y: 0 },               // P1: Top center
+      { x: 0, y: 50 },               // P2: Middle left
+      { x: 50, y: 50 + (morph / 2) }, // P3: Morphs from center
+      { x: 100, y: 50 },             // P4: Middle right
+    ];
+
+    // Calculate P3's distance from P2-P4 line (for length scaling)
+    // P2-P4 line is at y=50
+    const p2Y = 50;
+    const p3DistanceFromLine = Math.abs(points[2].y - p2Y);  // |50 + morph/2 - 50| = |morph/2|
+    const p1DistanceFromLine = Math.abs(points[0].y - p2Y);  // |0 - 50| = 50
+    const p3LengthMultiplier = p3DistanceFromLine / p1DistanceFromLine;
+
+    // Calculate angle for P2 OUT and P4 IN based on morph
+    // Positive morph: interpolates from 0° (east/west) to 90° (south), clamped at 90°
+    // Negative morph: interpolates from 0° (east/west) to -90° (north), clamped at -90°
+    const angleRatio = Math.sign(morph) * Math.min(1.0, Math.abs(morph) / 100);
+    const angleRadians = angleRatio * (Math.PI / 2); // -90° to +90°
+
+    // P2 OUT: rotates from east toward south (positive) or north (negative)
+    const p2_out = {
+      x: Math.cos(angleRadians),  // 1 → 0
+      y: Math.sin(angleRadians)   // 0 → ±1
+    };
+
+    // P4 IN: mirror of P2
+    const p4_in = {
+      x: -Math.cos(angleRadians), // -1 → 0
+      y: Math.sin(angleRadians)   // 0 → ±1
+    };
+
+    const controlDirections = [
+      // P1 (top center): fixed horizontal helpers
+      { 
+        in: { x: 1, y: 0 }, 
+        out: { x: -1, y: 0 }, 
+        lengthMultiplier: 1.0 
+      },
+      
+      // P2 (bottom-left): IN=fixed north, OUT=interpolated angle
+      { 
+        in: { x: 0, y: -1 }, 
+        out: p2_out, 
+        lengthMultiplier: 1.0 
+      },
+      
+      // P3 (bottom-center): fixed horizontal, variable length
+      { 
+        in: { x: -1, y: 0 }, 
+        out: { x: 1, y: 0 }, 
+        lengthMultiplier: p3LengthMultiplier 
+      },
+      
+      // P4 (bottom-right): IN=interpolated angle, OUT=fixed north
+      { 
+        in: p4_in, 
+        out: { x: 0, y: -1 }, 
+        lengthMultiplier: 1.0 
+      }
+    ];
+
+    // Calculate actual control points
+    const controls = points.map((p, i) => {
+      const curveLength = curve * controlDirections[i].lengthMultiplier;
+      return {
+        in:  { 
+          x: p.x + controlDirections[i].in.x * curveLength, 
+          y: p.y + controlDirections[i].in.y * curveLength 
+        },
+        out: { 
+          x: p.x + controlDirections[i].out.x * curveLength, 
+          y: p.y + controlDirections[i].out.y * curveLength 
+        }
+      };
+    });
+
+    // Build path using CUBIC Bezier curves
+    let path = `M ${points[0].x},${points[0].y}`;
+    
+    for (let i = 0; i < points.length; i++) {
+      const nextIndex = (i + 1) % points.length;
+      const cp1 = controls[i].out;
+      const cp2 = controls[nextIndex].in;
+      const nextPoint = points[nextIndex];
+      
+      path += ` C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${nextPoint.x},${nextPoint.y}`;
+    }
+    
+    path += ' Z';
+    
+    // Calculate bounds
+    const allPoints = [...points];
+    controls.forEach(c => {
+      allPoints.push(c.in, c.out);
+    });
+    
+    const xs = allPoints.map(p => p.x);
+    const ys = allPoints.map(p => p.y);
+    const bounds = {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys)
+    };
+    
+    return {
+      path: path.trim().replace(/\s+/g, ' '),
+      bounds: bounds
+    };
   }
 
   _fieldStyle(n) {
@@ -651,6 +788,25 @@ class CustomCompassCard extends LitElement {
       `;
     };
 
+    // Generate SVG arrow path
+    const arrowMorph = parseFloat(c.arrow_morph) || 0;
+    const arrowCurve = parseFloat(c.arrow_curve) || 0;
+    const arrowWidth = parseFloat(c.arrow_width) || 3;
+    const arrowHeight = parseFloat(c.arrow_height) || 16;
+    const pathData = this._buildArrowPath(arrowMorph, arrowCurve, arrowWidth, arrowHeight);
+    const arrowPath = pathData.path;
+    
+    // ViewBox EXACTLY matches shape bounds - preserveAspectRatio="none" will stretch to CSS box
+    const bounds = pathData.bounds;
+    const padding = 2;  // Minimal padding
+    
+    const viewBoxX = bounds.minX - padding;
+    const viewBoxY = bounds.minY - padding;
+    const viewBoxWidth = (bounds.maxX - bounds.minX) + (padding * 2);
+    const viewBoxHeight = (bounds.maxY - bounds.minY) + (padding * 2);
+    
+    const arrowViewBox = `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`;
+
     return html`
       <ha-card>
         <div class="compass-container">
@@ -661,7 +817,11 @@ class CustomCompassCard extends LitElement {
           </div>
           <div class="compass-arrow-wrapper" style="transform:${wrapperTransform}">
             ${c.arrow_show ? html`
-              <div class="compass-arrow ${c.arrow_invert ? 'inward' : 'outward'}"></div>
+              <svg class="compass-arrow ${c.arrow_invert ? 'inward' : 'outward'}" 
+                   viewBox="${arrowViewBox}"
+                   preserveAspectRatio="none">
+                <path d="${arrowPath}" fill="var(--cc-arrow-color)" />
+              </svg>
             ` : ''}
           </div>
         </div>
@@ -714,17 +874,12 @@ class CustomCompassCard extends LitElement {
     }
     .compass-arrow {
       position: absolute;
-      width: 0; height: 0;
-      border-left:   var(--cc-arrow-border-left,   3px solid transparent);
-      border-right:  var(--cc-arrow-border-right,  3px solid transparent);
-    }
-    .compass-arrow.outward {
+      width: var(--cc-arrow-width, 6px);
+      height: var(--cc-arrow-height, 32px);
       top: calc(0px - var(--cc-arrow-position, 0px));
-      border-bottom: var(--cc-arrow-border, 27px solid #e0e0e0);
     }
     .compass-arrow.inward {
-      top: calc(0px - var(--cc-arrow-position, 0px));
-      border-top: var(--cc-arrow-border, 27px solid #e0e0e0);
+      transform: scaleY(-1);
     }
     .field {
       position: absolute;
