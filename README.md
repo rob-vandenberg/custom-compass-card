@@ -50,15 +50,17 @@ Add the card to your Lovelace dashboard:
 
 ```yaml
 type: custom:custom-compass-card
-compass_entity: sun.sun
-compass_attribute: 'azimuth'
+compass_entity: sensor.wind_bearing
+compass_attribute: ''
 compass_adjustment: 0
 background_color: '#101010'
 circle_color: '#383838'
 circle_width: 16
+border_size: 0
 arrow_color: '#E0E0E0'
 arrow_width: 3
 arrow_height: 16
+arrow_position: 0
 arrow_show: true
 arrow_invert: false
 arrow_rotate: false
@@ -95,9 +97,11 @@ field_3_unit_fontcolor: '#606060'
 | `background_color` | string | `'#101010'` | Background color (supports #RRGGBBAA) |
 | `circle_color` | string | `'#383838'` | Border color |
 | `circle_width` | number | `16` | Border width in pixels |
+| `border_size` | number | `0` | Border size offset in pixels (positive=larger, negative=smaller) |
 | `arrow_color` | string | `'#E0E0E0'` | Arrow color (supports transparency) |
 | `arrow_width` | number | `3` | Arrow width in pixels |
 | `arrow_height` | number | `16` | Arrow height in pixels |
+| `arrow_position` | number | `0` | Arrow position offset in pixels (positive=outward, negative=inward) |
 | `arrow_show` | boolean | `true` | Show or hide the arrow |
 | `arrow_invert` | boolean | `false` | Invert arrow direction (outward ↔ inward) |
 | `arrow_rotate` | boolean | `false` | Rotate arrow 180° (position on opposite side) |

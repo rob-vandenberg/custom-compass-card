@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '2.2.41';
+const CARD_VERSION = '2.3.5';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -11,9 +11,11 @@ const DEFAULT_CONFIG = {
   background_color: '#101010',
   circle_width: 16,
   circle_color: '#383838',
+  border_size: 0,
   arrow_width: 3,
   arrow_height: 16,
   arrow_color: '#E0E0E0',
+  arrow_position: 0,
   arrow_show: true,
   arrow_invert: false,
   arrow_rotate: false,
@@ -140,11 +142,11 @@ class CustomCompassCardEditor extends LitElement {
         
       </div>
 
-      <div class="styling-grid">
-        ${this._colorPicker('background_color', 'Background Color')}
-        ${this._colorPicker('circle_color', 'Border Color')}
+      <div class="compass-styling-grid">
+        ${this._colorPicker('background_color', 'Background')}
+        ${this._colorPicker('circle_color', 'Border color')}
         <div class="text-field">
-          <label>Border Width (px)</label>
+          <label>Border width</label>
           <ha-textfield
             type="number"
             step="1"
@@ -153,12 +155,21 @@ class CustomCompassCardEditor extends LitElement {
             @input=${e => this._valueChanged('circle_width', e)}
           ></ha-textfield>
         </div>
+        <div class="text-field">
+          <label>Border size</label>
+          <ha-textfield
+            type="number"
+            step="1"
+            .value=${String(c.border_size ?? 0)}
+            @input=${e => this._valueChanged('border_size', e)}
+          ></ha-textfield>
+        </div>
       </div>
       
-      <div class="styling-grid">
-        ${this._colorPicker('arrow_color', 'Arrow Color')}
+      <div class="arrow-styling-grid">
+        ${this._colorPicker('arrow_color', 'Arrow color')}
         <div class="text-field">
-          <label>Arrow Height (px)</label>
+          <label>Arrow height</label>
           <ha-textfield
             type="number"
             step="1"
@@ -168,13 +179,22 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
         <div class="text-field">
-          <label>Arrow Width (px)</label>
+          <label>Arrow width</label>
           <ha-textfield
             type="number"
             step="1"
             min="1"
             .value=${String(c.arrow_width ?? 3)}
             @input=${e => this._valueChanged('arrow_width', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Arrow position</label>
+          <ha-textfield
+            type="number"
+            step="1"
+            .value=${String(c.arrow_position ?? 0)}
+            @input=${e => this._valueChanged('arrow_position', e)}
           ></ha-textfield>
         </div>
       </div>
@@ -370,9 +390,17 @@ class CustomCompassCardEditor extends LitElement {
       gap: 8px;
     }
 
-    .styling-grid {
+    .compass-styling-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 3fr 3fr 2fr 2fr;
+      gap: 8px;
+      margin-top: 24px;
+      margin-bottom: 16px;
+    }
+
+    .arrow-styling-grid {
+      display: grid;
+      grid-template-columns: 3fr 2fr 2fr 2fr;
       gap: 8px;
       margin-top: 24px;
       margin-bottom: 16px;
@@ -553,9 +581,11 @@ class CustomCompassCard extends LitElement {
     this.style.setProperty('--cc-font-size', `${actualWidth * 0.08}px`);
 
     const initBorder = parseFloat(this.config.circle_width) || 15;
+    const borderSize = parseFloat(this.config.border_size) || 0;
     this.style.setProperty('--cc-circle-border-width', `${initBorder * scale}px`);
     this.style.setProperty('--cc-circle-color', this.config.circle_color || 'var(--divider-color)');
     this.style.setProperty('--cc-bg-color', this.config.background_color || 'var(--primary-background-color)');
+    this.style.setProperty('--cc-border-size', `${borderSize}px`);
 
     // Set arrow CSS variables
     const initW = parseFloat(this.config.arrow_width)  || 3;
@@ -564,11 +594,13 @@ class CustomCompassCard extends LitElement {
 
     const scaledW   = initW   * scale;
     const scaledH   = initH   * scale;
+    const arrowPos  = parseFloat(this.config.arrow_position) || 0;
 
     this.style.setProperty('--cc-arrow-border-left',   `${scaledW}px solid transparent`);
     this.style.setProperty('--cc-arrow-border-right',  `${scaledW}px solid transparent`);
     this.style.setProperty('--cc-arrow-border',        `${scaledH}px solid ${color}`);
     this.style.setProperty('--cc-arrow-height',        `${scaledH}px`);
+    this.style.setProperty('--cc-arrow-position',      `${arrowPos}px`);
   }
 
   async _evaluateTemplate(template, degrees) {
@@ -648,17 +680,21 @@ class CustomCompassCard extends LitElement {
     }
     .compass-container {
       position: relative;
-      width: 84%;
-      padding-bottom: 84%;
+      width: 100%;
+      padding: 8%;
+      padding-bottom: 92%;
       height: 0;
       display: block;
-      margin: 8% auto;
+      margin: 0 auto;
       overflow: hidden;
+      box-sizing: border-box;
     }
     .compass-circle {
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+      top: calc(8% - var(--cc-border-size, 0px));
+      left: calc(8% - var(--cc-border-size, 0px));
+      right: calc(8% - var(--cc-border-size, 0px));
+      bottom: calc(8% - var(--cc-border-size, 0px));
       border-radius: 50%;
       background-color: var(--cc-bg-color, #111111);
       border: var(--cc-circle-border-width, 15px) solid var(--cc-circle-color, #333333);
@@ -667,10 +703,10 @@ class CustomCompassCard extends LitElement {
     }
     .compass-arrow-wrapper {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 8%;
+      left: 8%;
+      right: 8%;
+      bottom: 8%;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -683,11 +719,11 @@ class CustomCompassCard extends LitElement {
       border-right:  var(--cc-arrow-border-right,  3px solid transparent);
     }
     .compass-arrow.outward {
-      top: 0px;
+      top: calc(0px - var(--cc-arrow-position, 0px));
       border-bottom: var(--cc-arrow-border, 27px solid #e0e0e0);
     }
     .compass-arrow.inward {
-      top: 0px;
+      top: calc(0px - var(--cc-arrow-position, 0px));
       border-top: var(--cc-arrow-border, 27px solid #e0e0e0);
     }
     .field {
