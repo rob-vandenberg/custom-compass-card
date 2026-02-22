@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '2.5.16';
+const CARD_VERSION = '2.5.17';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -796,14 +796,13 @@ class CustomCompassCard extends LitElement {
     const pathData = this._buildArrowPath(arrowMorph, arrowCurve, arrowWidth, arrowHeight);
     const arrowPath = pathData.path;
     
-    // ViewBox EXACTLY matches shape bounds - preserveAspectRatio="none" will stretch to CSS box
+    // ViewBox EXACTLY matches shape bounds - no padding needed (bounds include control points)
     const bounds = pathData.bounds;
-    const padding = 2;  // Minimal padding
     
-    const viewBoxX = bounds.minX - padding;
-    const viewBoxY = bounds.minY - padding;
-    const viewBoxWidth = (bounds.maxX - bounds.minX) + (padding * 2);
-    const viewBoxHeight = (bounds.maxY - bounds.minY) + (padding * 2);
+    const viewBoxX = bounds.minX;
+    const viewBoxY = bounds.minY;
+    const viewBoxWidth = bounds.maxX - bounds.minX;
+    const viewBoxHeight = bounds.maxY - bounds.minY;
     
     const arrowViewBox = `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`;
 
