@@ -5,3 +5,6 @@ release.bat
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Folders
+backup/
