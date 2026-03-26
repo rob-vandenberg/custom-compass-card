@@ -1,0 +1,10 @@
+{
+  "name": "custom-compass-card",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "terser src/custom-compass-card.js -o custom-compass-card.js --compress --mangle"
+  },
+  "devDependencies": {
+    "terser": "^5.0.0"
+  }
+}
