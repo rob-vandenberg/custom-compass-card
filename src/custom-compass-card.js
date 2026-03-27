@@ -1,66 +1,115 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.2.82';
+const CARD_VERSION = '3.2.101';
+// ─── Card Version History ─────────────────────────────────────────────────────
+// v3.2.101: Header/footer use calc(±10px + position) for translateY; padding reduced to 10px
+// v3.2.100: Adjust header/footer natural position via padding; set default fontsize to 2.0
+// v3.2.99: Add template support to header/footer; reorder DEFAULT_CONFIG; rename dirs to directions
+// v3.2.98: Add optional header and footer text above/below compass circle
+// v3.2.97: Fix getCompassDirection: build all 16 directions from the 4 configured cardinals
+// v3.2.96: Fix Bezel labels in editor; fix getCompassDirection to use configured cardinals
+// v3.2.95: Update defaults: needle shape/color, tick marks visible, field_2 hidden
+// v3.2.94: Add Template label to field template inputs; consolidate unit fields onto one row
+// v3.2.93: Add fontweight and position to custom fields; remove hardcoded field top positions
+// v3.2.92: Update default values for tick marks and cardinals
+// v3.2.91: Cardinals get own fontsize/fontweight/position/fontcolor; rename cardinal_labels_show to cardinals_show
+// v3.2.90: Add cardinal_color; rename major_ticks_cardinals to cardinal_labels_show; use cardinal_color in rendering
+// v3.2.89: Fix cardinal labels filtered out by show flag: return show:true from cardinal branch
+// v3.2.88: Fix cardinal labels not rendering: remove dependency on major_ticks_show flag
+// v3.2.87: Add configurable cardinal labels (N/E/S/W); mutual exclusion between Cardinal labels and Primary ticks toggles in UI editor
+// v3.2.86: Replace all string-based config key lookups with explicit fieldDefs lookup objects in _updateTemplates, _fieldStyle, _unitStyle and renderField
+// v3.2.85: Add cardinals flag to tickDefs; replace hardcoded string comparison with def.cardinals boolean
+// v3.2.84: Replace string-based config key lookup with explicit tickDefs lookup object
+// v3.2.83: Fix tick mark rendering: correct config key pattern from tick_major_ to major_ticks_ after variable rename
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
-  compass_entity:         'sun.sun',
-  compass_attribute:      'azimuth',
-  compass_adjustment:     0,
-  background_color:       '#101010',
-  border_color:           '#383838',
-  border_width:           16,
-  border_size:            0,
-  needle_width:           4,
-  needle_height:          16,
-  needle_color_1:         '#FF0000',
-  needle_color_1_pos:     0,
-  needle_color_2:         '#FF0000',
-  needle_color_2_pos:     100,
-  needle_position:        0,
-  needle_morph:           0,
-  needle_curve:           0,
-  needle_show:            true,
-  needle_invert:          false,
-  needle_rotate:          false,
-  tick_large_show:        true,
-  tick_large_length:      8,
-  tick_large_width:       6,
-  tick_large_color:       '#CCCCCC',
-  tick_large_position:    0,
-  tick_large_cardinals:   true,
-  tick_medium_show:       true,
-  tick_medium_length:     3,
-  tick_medium_width:      1.5,
-  tick_medium_color:      '#AAAAAA',
-  tick_medium_position:   -4.5,
-  tick_small_show:        true,
-  tick_small_length:      0,
-  tick_small_width:       2,
-  tick_small_color:       '#888888',
-  tick_small_position:    -6.5,
-  field_1_show:           true,
-  field_1_template:       '${compass_direction}',
-  field_1_unit:           '',
-  field_1_fontsize:       1.6,
-  field_1_fontcolor:      '#29B6CF',
-  field_1_unit_fontsize:  1.0,
-  field_1_unit_fontcolor: '#196D7C',
-  field_2_show:           true,
-  field_2_template:       "{{ states('sensor.ws_wind_speed') | round(1) }}",
-  field_2_unit:           'km/h',
-  field_2_fontsize:       2.1,
-  field_2_fontcolor:      '#E8E8E8',
-  field_2_unit_fontsize:  1.2,
-  field_2_unit_fontcolor: '#8C8C8C',
-  field_3_show:           true,
-  field_3_template:       "{{ state_attr('sun.sun', 'azimuth') | round(0) }}",
-  field_3_unit:           '°',
-  field_3_fontsize:       1.4,
-  field_3_fontcolor:      '#808080',
-  field_3_unit_fontsize:  1.4,
-  field_3_unit_fontcolor: '#606060',
+  compass_entity:           'sun.sun',
+  compass_attribute:        'azimuth',
+  compass_adjustment:       0,
+  background_color:         '#101010',
+  bezel_color:              '#383838',
+  bezel_width:              16,
+  bezel_size:               0,
+  needle_show:              true,
+  needle_invert:            false,
+  needle_rotate:            false,
+  needle_color_1:           '#FF0000',
+  needle_color_1_pos:       50,
+  needle_color_2:           '#EEEEEE',
+  needle_color_2_pos:       50,
+  needle_height:            100,
+  needle_width:             10,
+  needle_position:          -10,
+  needle_morph:             50,
+  needle_curve:             0,
+  cardinals_show:           false,
+  cardinal_north:           'N',
+  cardinal_east:            'E',
+  cardinal_south:           'S',
+  cardinal_west:            'W',
+  cardinals_fontsize:       10,
+  cardinals_fontweight:     400,
+  cardinals_position:       1.5,
+  cardinals_fontcolor:      '#EEEEEE',
+  major_ticks_show:         true,
+  major_ticks_length:       6,
+  major_ticks_width:        2,
+  major_ticks_position:     -3.5,
+  major_ticks_color:        '#CCCCCC',
+  minor_ticks_show:         true,
+  minor_ticks_length:       3,
+  minor_ticks_width:        1.5,
+  minor_ticks_position:     -4.5,
+  minor_ticks_color:        '#AAAAAA',
+  micro_ticks_show:         true,
+  micro_ticks_length:       0,
+  micro_ticks_width:        2,
+  micro_ticks_position:     -6.5,
+  micro_ticks_color:        '#888888',
+  header_show:              false,
+  header_text:              'header',
+  header_fontsize:          2.0,
+  header_fontweight:        400,
+  header_position:          0,
+  header_fontcolor:         '#FFFFFF',
+  footer_show:              false,
+  footer_text:              'footer',
+  footer_fontsize:          2.0,
+  footer_fontweight:        400,
+  footer_position:          0,
+  footer_fontcolor:         '#FFFFFF',
+  field_1_show:             true,
+  field_1_template:         '${compass_direction}',
+  field_1_fontsize:         1.5,
+  field_1_fontweight:       400,
+  field_1_position:         23,
+  field_1_fontcolor:        '#29B6CF',
+  field_1_unit:             '',
+  field_1_unit_fontsize:    1.0,
+  field_1_unit_fontweight:  400,
+  field_1_unit_fontcolor:   '#196D7C',
+  field_2_show:             false,
+  field_2_template:         "{{ states('sensor.ws_wind_speed') | round(1) }}",
+  field_2_unit:             'km/h',
+  field_2_fontsize:         2.0,
+  field_2_fontweight:       400,
+  field_2_position:         50,
+  field_2_fontcolor:        '#E8E8E8',
+  field_2_unit_fontsize:    1.2,
+  field_2_unit_fontweight:  400,
+  field_2_unit_fontcolor:   '#8C8C8C',
+  field_3_show:             true,
+  field_3_template:         "{{ state_attr('sun.sun', 'azimuth') | round(0) }}",
+  field_3_unit:             '°',
+  field_3_fontsize:         1.4,
+  field_3_fontweight:       400,
+  field_3_position:         79,
+  field_3_fontcolor:        '#808080',
+  field_3_unit_fontsize:    1.4,
+  field_3_unit_fontweight:  400,
+  field_3_unit_fontcolor:   '#606060',
 };
 
 // ─── Visual Editor ────────────────────────────────────────────────────────────
@@ -166,21 +215,21 @@ class CustomCompassCardEditor extends LitElement {
       <!-- Compass styling -->
       <div class="compass-styling-grid">
         ${this._colorPicker('background_color', 'Background')}
-        ${this._colorPicker('border_color', 'Border color')}
+        ${this._colorPicker('bezel_color', 'Bezel color')}
         <div class="text-field">
-          <label>Border width</label>
+          <label>Bezel width</label>
           <ha-textfield
             type="number" step="1" min="0"
-            .value=${String(c.border_width)}
-            @input=${e => this._valueChanged('border_width', e)}
+            .value=${String(c.bezel_width)}
+            @input=${e => this._valueChanged('bezel_width', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
-          <label>Border size</label>
+          <label>Bezel size</label>
           <ha-textfield
             type="number" step="1"
-            .value=${String(c.border_size)}
-            @input=${e => this._valueChanged('border_size', e)}
+            .value=${String(c.bezel_size)}
+            @input=${e => this._valueChanged('bezel_size', e)}
           ></ha-textfield>
         </div>
       </div>
@@ -280,17 +329,84 @@ class CustomCompassCardEditor extends LitElement {
 
 	  <h2>Tickmarks configuration</h2>
 
-      <!-- Large ticks -->
+      <!-- Cardinal labels -->
       <div class="tickmark-toggles-grid">
-        <label>Show large ticks</label>
+        <label>Cardinal labels</label>
         <ha-switch
-          .checked=${c.tick_large_show}
-          @change=${e => this._valueChanged('tick_large_show', e)}
+          .checked=${c.cardinals_show}
+          @change=${e => {
+            this._valueChanged('cardinals_show', e);
+            if (e.target.checked) this._valueChanged('major_ticks_show', { target: { tagName: 'HA-SWITCH', checked: false } });
+          }}
         ></ha-switch>
-        <label style="margin-left:16px;">Cardinal labels</label>
+      </div>
+      <div class="cardinal-labels-grid">
+        <div class="text-field">
+          <label>North</label>
+          <ha-textfield
+            .value=${c.cardinal_north}
+            @input=${e => this._valueChanged('cardinal_north', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>East</label>
+          <ha-textfield
+            .value=${c.cardinal_east}
+            @input=${e => this._valueChanged('cardinal_east', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>South</label>
+          <ha-textfield
+            .value=${c.cardinal_south}
+            @input=${e => this._valueChanged('cardinal_south', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>West</label>
+          <ha-textfield
+            .value=${c.cardinal_west}
+            @input=${e => this._valueChanged('cardinal_west', e)}
+          ></ha-textfield>
+        </div>
+      </div>
+      <div class="tickmark-styling-grid">
+        <div class="text-field">
+          <label>Font size</label>
+          <ha-textfield
+            type="number" step="0.5" min="0"
+            .value=${String(c.cardinals_fontsize)}
+            @input=${e => this._valueChanged('cardinals_fontsize', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Font weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.cardinals_fontweight)}
+            @input=${e => this._valueChanged('cardinals_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Position</label>
+          <ha-textfield
+            type="number" step="0.5"
+            .value=${String(c.cardinals_position)}
+            @input=${e => this._valueChanged('cardinals_position', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('cardinals_fontcolor', 'Color')}
+      </div>
+
+      <!-- Primary ticks -->
+      <div class="tickmark-toggles-grid">
+        <label>Primary ticks</label>
         <ha-switch
-          .checked=${c.tick_large_cardinals}
-          @change=${e => this._valueChanged('tick_large_cardinals', e)}
+          .checked=${c.major_ticks_show}
+          @change=${e => {
+            this._valueChanged('major_ticks_show', e);
+            if (e.target.checked) this._valueChanged('cardinals_show', { target: { tagName: 'HA-SWITCH', checked: false } });
+          }}
         ></ha-switch>
       </div>
       <div class="tickmark-styling-grid">
@@ -298,35 +414,35 @@ class CustomCompassCardEditor extends LitElement {
           <label>Length</label>
           <ha-textfield
             type="number" step="0.1" min="0"
-            .value=${String(c.tick_large_length)}
-            @input=${e => this._valueChanged('tick_large_length', e)}
+            .value=${String(c.major_ticks_length)}
+            @input=${e => this._valueChanged('major_ticks_length', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
           <ha-textfield
             type="number" step="0.1" min="0"
-            .value=${String(c.tick_large_width)}
-            @input=${e => this._valueChanged('tick_large_width', e)}
+            .value=${String(c.major_ticks_width)}
+            @input=${e => this._valueChanged('major_ticks_width', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
           <ha-textfield
             type="number" step="0.5"
-            .value=${String(c.tick_large_position)}
-            @input=${e => this._valueChanged('tick_large_position', e)}
+            .value=${String(c.major_ticks_position)}
+            @input=${e => this._valueChanged('major_ticks_position', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('tick_large_color', 'Color')}
+        ${this._colorPicker('major_ticks_color', 'Color')}
       </div>
 
       <!-- Medium ticks -->
       <div class="tickmark-toggles-grid">
-        <label>Show medium ticks</label>
+        <label>Secondary ticks</label>
         <ha-switch
-          .checked=${c.tick_medium_show}
-          @change=${e => this._valueChanged('tick_medium_show', e)}
+          .checked=${c.minor_ticks_show}
+          @change=${e => this._valueChanged('minor_ticks_show', e)}
         ></ha-switch>
       </div>
       <div class="tickmark-styling-grid">
@@ -334,35 +450,35 @@ class CustomCompassCardEditor extends LitElement {
           <label>Length</label>
           <ha-textfield
             type="number" step="0.1" min="0"
-            .value=${String(c.tick_medium_length)}
-            @input=${e => this._valueChanged('tick_medium_length', e)}
+            .value=${String(c.minor_ticks_length)}
+            @input=${e => this._valueChanged('minor_ticks_length', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
           <ha-textfield
             type="number" step="0.1" min="0"
-            .value=${String(c.tick_medium_width)}
-            @input=${e => this._valueChanged('tick_medium_width', e)}
+            .value=${String(c.minor_ticks_width)}
+            @input=${e => this._valueChanged('minor_ticks_width', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
           <ha-textfield
             type="number" step="0.5"
-            .value=${String(c.tick_medium_position)}
-            @input=${e => this._valueChanged('tick_medium_position', e)}
+            .value=${String(c.minor_ticks_position)}
+            @input=${e => this._valueChanged('minor_ticks_position', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('tick_medium_color', 'Color')}
+        ${this._colorPicker('minor_ticks_color', 'Color')}
       </div>
 
-      <!-- Small ticks -->
+      <!-- Micro ticks -->
       <div class="tickmark-toggles-grid">
-        <label>Show small ticks</label>
+        <label>Tertiary ticks</label>
         <ha-switch
-          .checked=${c.tick_small_show}
-          @change=${e => this._valueChanged('tick_small_show', e)}
+          .checked=${c.micro_ticks_show}
+          @change=${e => this._valueChanged('micro_ticks_show', e)}
         ></ha-switch>
       </div>
       <div class="tickmark-styling-grid">
@@ -370,27 +486,119 @@ class CustomCompassCardEditor extends LitElement {
           <label>Length</label>
           <ha-textfield
             type="number" step="0.1" min="0"
-            .value=${String(c.tick_small_length)}
-            @input=${e => this._valueChanged('tick_small_length', e)}
+            .value=${String(c.micro_ticks_length)}
+            @input=${e => this._valueChanged('micro_ticks_length', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
           <ha-textfield
             type="number" step="0.1" min="0"
-            .value=${String(c.tick_small_width)}
-            @input=${e => this._valueChanged('tick_small_width', e)}
+            .value=${String(c.micro_ticks_width)}
+            @input=${e => this._valueChanged('micro_ticks_width', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
           <ha-textfield
             type="number" step="0.5"
-            .value=${String(c.tick_small_position)}
-            @input=${e => this._valueChanged('tick_small_position', e)}
+            .value=${String(c.micro_ticks_position)}
+            @input=${e => this._valueChanged('micro_ticks_position', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('tick_small_color', 'Color')}
+        ${this._colorPicker('micro_ticks_color', 'Color')}
+      </div>
+
+	  <h2 style="margin-bottom: 0px;">Header &amp; Footer</h2>
+
+      <!-- Header -->
+      <div class="field-toggles-grid">
+        <label>Show header</label>
+        <ha-switch
+          .checked=${c.header_show}
+          @change=${e => this._valueChanged('header_show', e)}
+        ></ha-switch>
+      </div>
+      <div class="field-template-grid">
+        <div class="text-field">
+          <label>Template</label>
+          <ha-textfield
+            .value=${c.header_text}
+            @input=${e => this._valueChanged('header_text', e)}
+          ></ha-textfield>
+        </div>
+      </div>
+      <div class="tickmark-styling-grid">
+        <div class="text-field">
+          <label>Font size</label>
+          <ha-textfield
+            type="number" step="0.1"
+            .value=${String(c.header_fontsize)}
+            @input=${e => this._valueChanged('header_fontsize', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Font weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.header_fontweight)}
+            @input=${e => this._valueChanged('header_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Position</label>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(c.header_position)}
+            @input=${e => this._valueChanged('header_position', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('header_fontcolor', 'Color')}
+      </div>
+
+      <!-- Footer -->
+      <div class="field-toggles-grid">
+        <label>Show footer</label>
+        <ha-switch
+          .checked=${c.footer_show}
+          @change=${e => this._valueChanged('footer_show', e)}
+        ></ha-switch>
+      </div>
+      <div class="field-template-grid">
+        <div class="text-field">
+          <label>Template</label>
+          <ha-textfield
+            .value=${c.footer_text}
+            @input=${e => this._valueChanged('footer_text', e)}
+          ></ha-textfield>
+        </div>
+      </div>
+      <div class="tickmark-styling-grid">
+        <div class="text-field">
+          <label>Font size</label>
+          <ha-textfield
+            type="number" step="0.1"
+            .value=${String(c.footer_fontsize)}
+            @input=${e => this._valueChanged('footer_fontsize', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Font weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.footer_fontweight)}
+            @input=${e => this._valueChanged('footer_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Position</label>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(c.footer_position)}
+            @input=${e => this._valueChanged('footer_position', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('footer_fontcolor', 'Color')}
       </div>
 
 	  <h2 style="margin-bottom: 0px;">Custom fields configuration</h2>
@@ -403,41 +611,67 @@ class CustomCompassCardEditor extends LitElement {
           @change=${e => this._valueChanged('field_1_show', e)}
         ></ha-switch>
       </div>
-      <div class="field-styling-grid">
+      <div class="field-template-grid">
         <div class="text-field">
-          <label>Field 1 template</label>
+          <label>Template</label>
           <ha-textfield
             .value=${c.field_1_template}
             @input=${e => this._valueChanged('field_1_template', e)}
           ></ha-textfield>
         </div>
+      </div>
+      <div class="tickmark-styling-grid">
         <div class="text-field">
-          <label>Font size (em)</label>
+          <label>Font size</label>
           <ha-textfield
             type="number" step="0.1"
             .value=${String(c.field_1_fontsize)}
             @input=${e => this._valueChanged('field_1_fontsize', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('field_1_fontcolor', 'Font Color')}
-      </div>
-      <div class="field-styling-grid">
         <div class="text-field">
-          <label>Field 1 unit</label>
+          <label>Font weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.field_1_fontweight)}
+            @input=${e => this._valueChanged('field_1_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Position (%)</label>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(c.field_1_position)}
+            @input=${e => this._valueChanged('field_1_position', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('field_1_fontcolor', 'Color')}
+      </div>
+      <div class="field-unit-grid">
+        <div class="text-field">
+          <label>Unit</label>
           <ha-textfield
             .value=${c.field_1_unit}
             @input=${e => this._valueChanged('field_1_unit', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
-          <label>Unit size (em)</label>
+          <label>Size</label>
           <ha-textfield
             type="number" step="0.1"
             .value=${String(c.field_1_unit_fontsize)}
             @input=${e => this._valueChanged('field_1_unit_fontsize', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('field_1_unit_fontcolor', 'Unit Color')}
+        <div class="text-field">
+          <label>Weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.field_1_unit_fontweight)}
+            @input=${e => this._valueChanged('field_1_unit_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('field_1_unit_fontcolor', 'Color')}
       </div>
 
 
@@ -449,41 +683,67 @@ class CustomCompassCardEditor extends LitElement {
           @change=${e => this._valueChanged('field_2_show', e)}
         ></ha-switch>
       </div>
-      <div class="field-styling-grid">
+      <div class="field-template-grid">
         <div class="text-field">
-          <label>Field 2 template</label>
+          <label>Template</label>
           <ha-textfield
             .value=${c.field_2_template}
             @input=${e => this._valueChanged('field_2_template', e)}
           ></ha-textfield>
         </div>
+      </div>
+      <div class="tickmark-styling-grid">
         <div class="text-field">
-          <label>Font size (em)</label>
+          <label>Font size</label>
           <ha-textfield
             type="number" step="0.1"
             .value=${String(c.field_2_fontsize)}
             @input=${e => this._valueChanged('field_2_fontsize', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('field_2_fontcolor', 'Font Color')}
-      </div>
-      <div class="field-styling-grid">
         <div class="text-field">
-          <label>Field 2 unit</label>
+          <label>Font weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.field_2_fontweight)}
+            @input=${e => this._valueChanged('field_2_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Position (%)</label>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(c.field_2_position)}
+            @input=${e => this._valueChanged('field_2_position', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('field_2_fontcolor', 'Color')}
+      </div>
+      <div class="field-unit-grid">
+        <div class="text-field">
+          <label>Unit</label>
           <ha-textfield
             .value=${c.field_2_unit}
             @input=${e => this._valueChanged('field_2_unit', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
-          <label>Unit size (em)</label>
+          <label>Size</label>
           <ha-textfield
             type="number" step="0.1"
             .value=${String(c.field_2_unit_fontsize)}
             @input=${e => this._valueChanged('field_2_unit_fontsize', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('field_2_unit_fontcolor', 'Unit Color')}
+        <div class="text-field">
+          <label>Weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.field_2_unit_fontweight)}
+            @input=${e => this._valueChanged('field_2_unit_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('field_2_unit_fontcolor', 'Color')}
       </div>
 
 
@@ -495,41 +755,67 @@ class CustomCompassCardEditor extends LitElement {
           @change=${e => this._valueChanged('field_3_show', e)}
         ></ha-switch>
       </div>
-      <div class="field-styling-grid">
+      <div class="field-template-grid">
         <div class="text-field">
-          <label>Field 3 template</label>
+          <label>Template</label>
           <ha-textfield
             .value=${c.field_3_template}
             @input=${e => this._valueChanged('field_3_template', e)}
           ></ha-textfield>
         </div>
+      </div>
+      <div class="tickmark-styling-grid">
         <div class="text-field">
-          <label>Font size (em)</label>
+          <label>Font size</label>
           <ha-textfield
             type="number" step="0.1"
             .value=${String(c.field_3_fontsize)}
             @input=${e => this._valueChanged('field_3_fontsize', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('field_3_fontcolor', 'Font Color')}
-      </div>
-      <div class="field-styling-grid">
         <div class="text-field">
-          <label>Field 3 unit</label>
+          <label>Font weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.field_3_fontweight)}
+            @input=${e => this._valueChanged('field_3_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Position (%)</label>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(c.field_3_position)}
+            @input=${e => this._valueChanged('field_3_position', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('field_3_fontcolor', 'Color')}
+      </div>
+      <div class="field-unit-grid">
+        <div class="text-field">
+          <label>Unit</label>
           <ha-textfield
             .value=${c.field_3_unit}
             @input=${e => this._valueChanged('field_3_unit', e)}
           ></ha-textfield>
         </div>
         <div class="text-field">
-          <label>Unit size (em)</label>
+          <label>Size</label>
           <ha-textfield
             type="number" step="0.1"
             .value=${String(c.field_3_unit_fontsize)}
             @input=${e => this._valueChanged('field_3_unit_fontsize', e)}
           ></ha-textfield>
         </div>
-        ${this._colorPicker('field_3_unit_fontcolor', 'Unit Color')}
+        <div class="text-field">
+          <label>Weight</label>
+          <ha-textfield
+            type="number" step="100" min="100" max="900"
+            .value=${String(c.field_3_unit_fontweight)}
+            @input=${e => this._valueChanged('field_3_unit_fontweight', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('field_3_unit_fontcolor', 'Color')}
       </div>
     `;
   }
@@ -587,6 +873,14 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 16px;
     }
 
+    .cardinal-labels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+
     .tickmark-toggles-grid {
       display: flex;
       align-items: center;
@@ -620,11 +914,19 @@ class CustomCompassCardEditor extends LitElement {
       min-width: 120px;
     }
 
-    .field-styling-grid {
+    .field-template-grid {
       display: grid;
-      grid-template-columns: 4fr 2fr 3fr;
+      grid-template-columns: 1fr;
       gap: 8px;
-      margin-top: 16px;
+      margin-top: 8px;
+    }
+
+    .field-unit-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 2fr;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: end;
     }
 
     .text-field {
@@ -685,13 +987,15 @@ customElements.define('custom-compass-card-editor', CustomCompassCardEditor);
 // ─── Main Card ────────────────────────────────────────────────────────────────
 class CustomCompassCard extends LitElement {
   static properties = {
-    hass:         { type: Object },
-    config:       { type: Object },
-    _degrees:     { type: Number },
-    _field1Value: { type: String },
-    _field2Value: { type: String },
-    _field3Value: { type: String },
-    _error:       { type: Boolean },
+    hass:          { type: Object },
+    config:        { type: Object },
+    _degrees:      { type: Number },
+    _field1Value:  { type: String },
+    _field2Value:  { type: String },
+    _field3Value:  { type: String },
+    _headerValue:  { type: String },
+    _footerValue:  { type: String },
+    _error:        { type: Boolean },
   };
 
   constructor() {
@@ -702,6 +1006,8 @@ class CustomCompassCard extends LitElement {
     this._field1Value    = '';
     this._field2Value    = '';
     this._field3Value    = '';
+    this._headerValue    = '';
+    this._footerValue    = '';
     this._error          = false;
   }
 
@@ -754,19 +1060,33 @@ class CustomCompassCard extends LitElement {
 
   async _updateTemplates() {
     this._templatesDirty = false;
-    for (const i of [1, 2, 3]) {
-      if (!this.config[`field_${i}_show`]) {
-        this[`_field${i}Value`] = '';
+    const fieldDefs = [
+      { index: 1, show: this.config.field_1_show, template: this.config.field_1_template },
+      { index: 2, show: this.config.field_2_show, template: this.config.field_2_template },
+      { index: 3, show: this.config.field_3_show, template: this.config.field_3_template },
+    ];
+    for (const def of fieldDefs) {
+      if (!def.show) {
+        this[`_field${def.index}Value`] = '';
         continue;
       }
       if (this._error) {
-        this[`_field${i}Value`] = 'Error';
+        this[`_field${def.index}Value`] = 'Error';
         continue;
       }
-      const tmpl = this.config[`field_${i}_template`];
-      if (tmpl) {
-        this[`_field${i}Value`] = await this._evaluateTemplate(tmpl, this._degrees);
+      if (def.template) {
+        this[`_field${def.index}Value`] = await this._evaluateTemplate(def.template, this._degrees);
       }
+    }
+    if (this.config.header_show && this.config.header_text) {
+      this._headerValue = await this._evaluateTemplate(this.config.header_text, this._degrees);
+    } else {
+      this._headerValue = '';
+    }
+    if (this.config.footer_show && this.config.footer_text) {
+      this._footerValue = await this._evaluateTemplate(this.config.footer_text, this._degrees);
+    } else {
+      this._footerValue = '';
     }
   }
 
@@ -788,10 +1108,10 @@ class CustomCompassCard extends LitElement {
 
     this.style.setProperty('--cc-font-size', `${actualWidth * 0.08}px`);
 
-    const initBorder = parseFloat(this.config.border_width);
-    const borderSize = parseFloat(this.config.border_size);
+    const initBorder = parseFloat(this.config.bezel_width);
+    const borderSize = parseFloat(this.config.bezel_size);
     this.style.setProperty('--cc-circle-border-width', `${initBorder * scale}px`);
-    this.style.setProperty('--cc-circle-color',        this.config.border_color);
+    this.style.setProperty('--cc-circle-color',        this.config.bezel_color);
     this.style.setProperty('--cc-bg-color',            this.config.background_color);
     this.style.setProperty('--cc-border-size',         `${borderSize}px`);
 
@@ -822,8 +1142,17 @@ class CustomCompassCard extends LitElement {
   }
 
   getCompassDirection(degrees) {
-    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-    return dirs[Math.floor((degrees + 11.25) / 22.5) % 16];
+    const N = this.config.cardinal_north;
+    const E = this.config.cardinal_east;
+    const S = this.config.cardinal_south;
+    const W = this.config.cardinal_west;
+    const directions = [
+      N, N+N+E, N+E, E+N+E,
+      E, E+S+E, S+E, S+S+E,
+      S, S+S+W, S+W, W+S+W,
+      W, W+N+W, N+W, N+N+W,
+    ];
+    return directions[Math.floor((degrees + 11.25) / 22.5) % 16];
   }
 
   _buildNeedlePath(morph, curve, invert, position) {
@@ -909,31 +1238,37 @@ class CustomCompassCard extends LitElement {
     const c   = this.config;
     const cx  = 50, cy = 50, r = 50;
 
-    const cardinals  = ['N', 'E', 'S', 'W'];
+    const cardinals   = [c.cardinal_north, c.cardinal_east, c.cardinal_south, c.cardinal_west];
     const cardinalIdx = [0, 4, 8, 12];
 
+    const tickDefs = {
+      major: { show: c.major_ticks_show, length: c.major_ticks_length, width: c.major_ticks_width, color: c.major_ticks_color, position: c.major_ticks_position || 0, cardinals: c.cardinals_show, cardinal_color: c.cardinals_fontcolor, cardinal_fontsize: c.cardinals_fontsize, cardinal_fontweight: c.cardinals_fontweight, cardinal_position: c.cardinals_position || 0 },
+      minor: { show: c.minor_ticks_show, length: c.minor_ticks_length, width: c.minor_ticks_width, color: c.minor_ticks_color, position: c.minor_ticks_position || 0, cardinals: false },
+      micro: { show: c.micro_ticks_show, length: c.micro_ticks_length, width: c.micro_ticks_width, color: c.micro_ticks_color, position: c.micro_ticks_position || 0, cardinals: false },
+    };
+
     const ticks = Array.from({ length: 16 }, (_, i) => {
-      const size     = i % 4 === 0 ? 'large' : i % 2 === 0 ? 'medium' : 'small';
-      const show     = c[`tick_${size}_show`];
-      const length   = parseFloat(c[`tick_${size}_length`]);
-      const width    = parseFloat(c[`tick_${size}_width`]);
-      const color    = c[`tick_${size}_color`];
-      const position = parseFloat(c[`tick_${size}_position`]) || 0;
+      const size     = i % 4 === 0 ? 'major' : i % 2 === 0 ? 'minor' : 'micro';
+      const def      = tickDefs[size];
+      const show     = def.show;
+      const length   = parseFloat(def.length);
+      const width    = parseFloat(def.width);
+      const color    = def.color;
+      const position = parseFloat(def.position);
       const angle    = (i * 22.5) * Math.PI / 180;
       const sinA     = Math.sin(angle);
       const cosA     = Math.cos(angle);
 
-      // Cardinal label for large ticks
-      if (size === 'large' && show && c.tick_large_cardinals) {
+      // Cardinal label for major ticks
+      if (def.cardinals) {
         const cardinalIndex = cardinalIdx.indexOf(i);
         const letter = cardinals[cardinalIndex];
-        // Anchor point at outer edge + position offset
-        const tx = cx + (r + position) * sinA;
-        const ty = cy - (r + position) * cosA;
-        const offset = length * 0.85;
+        const tx = cx + (r + def.cardinal_position) * sinA;
+        const ty = cy - (r + def.cardinal_position) * cosA;
+        const offset = def.cardinal_fontsize * 0.85;
         const lx = tx - offset * sinA;
         const ly = ty + offset * cosA;
-        return { show, type: 'text', x: lx, y: ly, letter, fontSize: length, width, color };
+        return { show: true, type: 'text', x: lx, y: ly, letter, fontSize: def.cardinal_fontsize, fontWeight: def.cardinal_fontweight, color: def.cardinal_color };
       }
 
       const x1 = cx + (r + position)          * sinA;
@@ -954,7 +1289,7 @@ class CustomCompassCard extends LitElement {
                 text-anchor="middle"
                 dominant-baseline="central"
                 font-size="${t.fontSize}"
-                font-weight="${t.width * 100}"
+                font-weight="${t.fontWeight}"
                 fill="${t.color}"
               >${t.letter}</text>
             `;
@@ -968,17 +1303,12 @@ class CustomCompassCard extends LitElement {
     `;
   }
 
-  _fieldStyle(n) {
-    const size  = parseFloat(this.config[`field_${n}_fontsize`]);
-    const color = this.config[`field_${n}_fontcolor`];
-    return `font-size:${size}em; color:${color};`;
+  _fieldStyle(def) {
+    return `font-size:${def.fontsize}em; font-weight:${def.fontweight}; color:${def.fontcolor}; top:${def.position}%;`;
   }
 
-  _unitStyle(n) {
-    const size      = parseFloat(this.config[`field_${n}_unit_fontsize`]);
-    const color     = this.config[`field_${n}_unit_fontcolor`];
-    const fieldSize = parseFloat(this.config[`field_${n}_fontsize`]);
-    return `font-size:${size / fieldSize}em; color:${color};`;
+  _unitStyle(def) {
+    return `font-size:${def.unit_fontsize / def.fontsize}em; font-weight:${def.unit_fontweight}; color:${def.unit_fontcolor};`;
   }
 
   render() {
@@ -988,12 +1318,17 @@ class CustomCompassCard extends LitElement {
     const wrapperRotation  = c.needle_rotate ? this._degrees + 180 : this._degrees;
     const wrapperTransform = `rotate(${wrapperRotation}deg)`;
 
-    const renderField = (n, val) => {
-      if (!c[`field_${n}_show`]) return html``;
-      const unit = c[`field_${n}_unit`];
+    const fieldDefs = [
+      { index: 1, show: c.field_1_show, unit: c.field_1_unit, fontsize: parseFloat(c.field_1_fontsize), fontweight: c.field_1_fontweight, position: c.field_1_position, fontcolor: c.field_1_fontcolor, unit_fontsize: parseFloat(c.field_1_unit_fontsize), unit_fontweight: c.field_1_unit_fontweight, unit_fontcolor: c.field_1_unit_fontcolor },
+      { index: 2, show: c.field_2_show, unit: c.field_2_unit, fontsize: parseFloat(c.field_2_fontsize), fontweight: c.field_2_fontweight, position: c.field_2_position, fontcolor: c.field_2_fontcolor, unit_fontsize: parseFloat(c.field_2_unit_fontsize), unit_fontweight: c.field_2_unit_fontweight, unit_fontcolor: c.field_2_unit_fontcolor },
+      { index: 3, show: c.field_3_show, unit: c.field_3_unit, fontsize: parseFloat(c.field_3_fontsize), fontweight: c.field_3_fontweight, position: c.field_3_position, fontcolor: c.field_3_fontcolor, unit_fontsize: parseFloat(c.field_3_unit_fontsize), unit_fontweight: c.field_3_unit_fontweight, unit_fontcolor: c.field_3_unit_fontcolor },
+    ];
+
+    const renderField = (def, val) => {
+      if (!def.show) return html``;
       return html`
-        <div class="field field-${n}" style=${this._fieldStyle(n)}>
-          ${val}${unit ? html`<span style=${this._unitStyle(n)}>${unit}</span>` : ''}
+        <div class="field field-${def.index}" style=${this._fieldStyle(def)}>
+          ${val}${def.unit ? html`<span style=${this._unitStyle(def)}>${def.unit}</span>` : ''}
         </div>
       `;
     };
@@ -1015,11 +1350,16 @@ class CustomCompassCard extends LitElement {
 
     return html`
       <ha-card>
+        ${c.header_show ? html`
+          <div class="card-header-text" style="font-size:${c.header_fontsize}em; font-weight:${c.header_fontweight}; color:${c.header_fontcolor}; transform:translateY(calc(10px + ${c.header_position}px));">
+            ${this._headerValue}
+          </div>
+        ` : ''}
         <div class="compass-container">
           <div class="compass-circle">
-            ${renderField(1, this._field1Value)}
-            ${renderField(2, this._field2Value)}
-            ${renderField(3, this._field3Value)}
+            ${renderField(fieldDefs[0], this._field1Value)}
+            ${renderField(fieldDefs[1], this._field2Value)}
+            ${renderField(fieldDefs[2], this._field3Value)}
           </div>
           ${this._renderTicks()}
           <div class="compass-needle-wrapper" style="transform:${wrapperTransform}">
@@ -1040,6 +1380,11 @@ class CustomCompassCard extends LitElement {
             ` : ''}
           </div>
         </div>
+        ${c.footer_show ? html`
+          <div class="card-footer-text" style="font-size:${c.footer_fontsize}em; font-weight:${c.footer_fontweight}; color:${c.footer_fontcolor}; transform:translateY(calc(-10px + ${c.footer_position}px));">
+            ${this._footerValue}
+          </div>
+        ` : ''}
       </ha-card>
     `;
   }
@@ -1052,6 +1397,20 @@ class CustomCompassCard extends LitElement {
       justify-content: center;
       align-items: center;
       box-sizing: border-box;
+    }
+    .card-header-text {
+      width: 100%;
+      text-align: center;
+      padding: 10px 8px 0 8px;
+      box-sizing: border-box;
+      line-height: 1.3;
+    }
+    .card-footer-text {
+      width: 100%;
+      text-align: center;
+      padding: 0 8px 10px 8px;
+      box-sizing: border-box;
+      line-height: 1.3;
     }
     .compass-container {
       position: relative;
@@ -1125,9 +1484,6 @@ class CustomCompassCard extends LitElement {
       transform: translateY(-50%);
       white-space: nowrap;
     }
-    .field-1 { top: 23%; }
-    .field-2 { top: 50%; }
-    .field-3 { top: 79%; }
   `;
 
   static getCardSize() {

@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'src/custom-compass-card.js'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=$(grep -o "CARD_VERSION = '[^']*'" src/custom-compass-card.js | sed "s/CARD_VERSION = '//;s/'//")" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: yarn install
@@ -24,4 +29,4 @@ jobs:
         uses: EndBug/add-and-commit@v9
         with:
           add: 'custom-compass-card.js'
-          message: "Auto-build minified JS from source"
+          message: "Auto-build minified JS from source v${{ steps.version.outputs.version }}"

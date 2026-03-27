@@ -10,17 +10,17 @@
 
 ## What is the Custom Compass Card?
 
-The Custom Compass Card displays a circular compass on your Home Assistant dashboard, driven by any entity that provides a bearing in degrees — wind direction, sun azimuth, moon position, or anything else that rotates.
+Custom Compass Card displays a compass on your Home Assistant dashboard, driven by any entity that provides a bearing in degrees — wind direction, sun azimuth, moon position, or anything else that rotates.
 
-What makes it different from other compass cards is the level of visual control. The needle isn't just a fixed arrow — it's a parametric shape you can morph from a sharp triangle into a rounded needle, a perfect circle, a kite, or virtually anything in between. The border ring can be decorated with three tiers of tick marks, and optionally display the cardinal points N, E, S, W as labels. Up to three text fields sit inside the compass and can display any entity value or Jinja2 template expression.
+What makes it different from other compass cards is the level of visual control. The needle isn't just a fixed arrow — it's a parametric shape you can morph from a sharp triangle into a rounded needle, a perfect circle, a kite, or virtually anything in between. The border ring can be decorated with three tiers of tick marks, and optionally display localized cardinal labels. Up to three text fields sit inside the compass, and an optional header and footer can appear above and below it. All text fields support Jinja2 template expressions.
 
-The same card, with different settings, can look like a wind speedomiter, a compass, a sun tracker, or a moon position indicator:
+Custom Compass Card is very customizable. The same card, with different settings, can look like a wind speedometer, a compass or a sun tracker:
 
 | Wind Speed | Compass |
 | :----: | :----: |
 | ![Wind Speed](screenshots/screenshot1.png) | ![Compass Direction](screenshots/screenshot2.png) |
 | Sun | Moon |
-| ![Sun](screenshots/screenshot3.png) | ![Moon](screenshots/screenshot4.png) | 
+| ![Sun](screenshots/screenshot3.png) | ![Moon](screenshots/screenshot4.png) |
 
 | UI Editor |
 | :-------: |
@@ -105,7 +105,7 @@ The needle shape is controlled by two parameters that work together.
 
 > **Tip:** To create a perfect circle — useful for a sun or moon dot — set `needle_morph: 50`, `needle_curve: 27.6`, and make `needle_width` and `needle_height` equal.
 
-The needle also supports a two-color gradient, invert (swap tip and tail), and rotate (flip to the opposite side of the compass).
+The needle supports a two-color gradient, invert (swap tip and tail), and rotate (flip to the opposite side of the compass).
 
 ---
 
@@ -113,28 +113,27 @@ The needle also supports a two-color gradient, invert (swap tip and tail), and r
 
 Three tiers of tick marks can be drawn around the border ring:
 
-- **Large** — 4 marks at the cardinal positions (0°, 90°, 180°, 270°)
-- **Medium** — 4 marks at the intercardinal positions (45°, 135°, 225°, 315°)
-- **Small** — 8 marks at the remaining 22.5° positions
+- **Major** — 4 marks at the cardinal positions (0°, 90°, 180°, 270°)
+- **Minor** — 4 marks at the intercardinal positions (45°, 135°, 225°, 315°)
+- **Micro** — 8 marks at the remaining 22.5° positions
 
 Each tier has independent controls for visibility, length, stroke width, color, and position (how far in or out from the border edge they sit).
 
 ### Cardinal labels
 
-Large tick marks can be replaced by the letters **N**, **E**, **S**, **W** by enabling the **Cardinal labels** toggle. When active:
+As an alternative to major tick marks, the cardinal directions can be displayed as text labels by enabling the **Cardinal labels** toggle. The labels are fully localizable — you can set any text for each of the four cardinal points, so Dutch users can display N/O/Z/W instead of N/E/S/W, for example.
 
-- `tick_large_length` controls the font size
-- `tick_large_width` controls the font weight (the value is multiplied by 100 — so `4` = weight 400, `7` = weight 700 bold)
-- `tick_large_color` controls the letter color
-- `tick_large_position` adjusts how close the letters sit to the border ring
+When cardinal labels are enabled, all 16 compass directions shown in the text fields are automatically derived from the four configured cardinal letters. So if you set North=N, East=O, South=Z, West=W, then NNE becomes NNO, SSE becomes ZZO, and so on.
+
+Cardinal labels and major tick marks are mutually exclusive in the editor — enabling one automatically disables the other.
 
 ---
 
 ## Text fields
 
-Three text fields can be displayed inside the compass at fixed vertical positions — top, center, and bottom. Each field shows a value and an optional unit.
+Three text fields can be displayed inside the compass at configurable vertical positions. Each field shows a value and an optional unit, with independent font size, font weight, and color controls for both the value and the unit.
 
-Templates support the special `${compass_direction}` token, which automatically converts the current bearing to a 16-point compass direction (N, NNE, NE, ENE...):
+Templates support the special `${compass_direction}` token, which automatically converts the current bearing to a 16-point compass direction:
 
 ```yaml
 field_1_template: '${compass_direction}'
@@ -149,6 +148,14 @@ field_2_unit: 'km/h'
 
 ---
 
+## Header and footer
+
+An optional header and footer can be displayed above and below the compass circle. When hidden they take up no space — the card remains square. When shown the card grows taller to accommodate them.
+
+Both header and footer support Jinja2 template expressions, the same as text fields.
+
+---
+
 ## Full configuration reference
 
 ### Compass
@@ -159,9 +166,9 @@ field_2_unit: 'km/h'
 | `compass_attribute` | `azimuth` | Attribute to read. Leave empty to use the entity state |
 | `compass_adjustment` | `0` | Degrees to add to the raw value before rendering |
 | `background_color` | `#101010` | Compass circle background. Supports `#RRGGBBAA` |
-| `circle_color` | `#383838` | Border ring color. Supports `#RRGGBBAA` |
-| `circle_width` | `16` | Border ring width |
-| `border_size` | `0` | Adjusts the outer boundary. Positive = larger, negative = smaller |
+| `bezel_color` | `#383838` | Border ring color. Supports `#RRGGBBAA` |
+| `bezel_width` | `16` | Border ring width |
+| `bezel_size` | `0` | Adjusts the outer boundary. Positive = larger, negative = smaller |
 
 ### Needle
 
@@ -170,41 +177,77 @@ field_2_unit: 'km/h'
 | `needle_show` | `true` | Show or hide the needle |
 | `needle_invert` | `false` | Swap tip and tail |
 | `needle_rotate` | `false` | Rotate 180° |
-| `needle_color_1` | `#E0E0E0` | Gradient start color |
-| `needle_color_1_pos` | `0` | Start color position (0–100%) |
-| `needle_color_2` | `#E0E0E0` | Gradient end color |
-| `needle_color_2_pos` | `100` | End color position (0–100%) |
-| `needle_height` | `16` | Needle height |
-| `needle_width` | `3` | Needle width |
-| `needle_position` | `0` | Offset from center. Positive = outward |
-| `needle_morph` | `0` | Tail shape. See Needle section above |
+| `needle_color_1` | `#FF0000` | Gradient start color. Supports `#RRGGBBAA` |
+| `needle_color_1_pos` | `50` | Start color position (0–100%) |
+| `needle_color_2` | `#EEEEEE` | Gradient end color. Supports `#RRGGBBAA` |
+| `needle_color_2_pos` | `50` | End color position (0–100%) |
+| `needle_height` | `100` | Needle height |
+| `needle_width` | `10` | Needle width |
+| `needle_position` | `-10` | Offset from center. Positive = outward, negative = inward |
+| `needle_morph` | `50` | Tail shape. See Needle section above |
 | `needle_curve` | `0` | Edge curvature. See Needle section above |
 
-### Tick marks (replace `large` with `medium` or `small`)
+### Cardinal labels
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `tick_large_show` | `true` | Show or hide |
-| `tick_large_length` | `8` | Line length, or font size when cardinals are on |
-| `tick_large_width` | `4` | Stroke width, or font weight ÷ 100 when cardinals are on |
-| `tick_large_color` | `#FFFFFF` | Color |
-| `tick_large_position` | `0` | Offset from border edge |
-| `tick_large_cardinals` | `false` | Replace lines with N/E/S/W labels (large tier only) |
+| `cardinals_show` | `false` | Show cardinal labels instead of major tick marks |
+| `cardinal_north` | `N` | Label for North |
+| `cardinal_east` | `E` | Label for East |
+| `cardinal_south` | `S` | Label for South |
+| `cardinal_west` | `W` | Label for West |
+| `cardinals_fontsize` | `10` | Font size (SVG units) |
+| `cardinals_fontweight` | `400` | Font weight (100–900, steps of 100) |
+| `cardinals_position` | `1.5` | Offset from border edge |
+| `cardinals_fontcolor` | `#EEEEEE` | Label color |
 
-Medium defaults: length `6`, width `1.5`, color `#CCCCCC`  
-Small defaults: length `4`, width `1`, color `#AAAAAA`
+### Tick marks
 
-### Text fields (replace `1` with `2` or `3`)
+Replace `major` with `minor` or `micro` for the other tiers.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `major_ticks_show` | `true` | Show or hide |
+| `major_ticks_length` | `6` | Line length |
+| `major_ticks_width` | `2` | Stroke width |
+| `major_ticks_position` | `-3.5` | Offset from border edge. Negative = inward |
+| `major_ticks_color` | `#CCCCCC` | Color |
+
+Minor defaults: length `3`, width `1.5`, position `-4.5`, color `#AAAAAA`  
+Micro defaults: length `0`, width `2`, position `-6.5`, color `#888888`
+
+### Header and footer
+
+Replace `header` with `footer` for the footer fields.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `header_show` | `false` | Show or hide. When false, takes up no space |
+| `header_text` | `header` | Static text or Jinja2 template |
+| `header_fontsize` | `2.0` | Font size in em |
+| `header_fontweight` | `400` | Font weight (100–900, steps of 100) |
+| `header_position` | `0` | Vertical offset in pixels |
+| `header_fontcolor` | `#FFFFFF` | Text color |
+
+### Text fields
+
+Replace `1` with `2` or `3` for the other fields.
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `field_1_show` | `true` | Show or hide |
-| `field_1_template` | — | Value to display. Supports `${compass_direction}` and Jinja2 |
+| `field_1_template` | `${compass_direction}` | Static text, Jinja2, or `${compass_direction}` |
+| `field_1_fontsize` | `1.5` | Font size in em |
+| `field_1_fontweight` | `400` | Font weight (100–900, steps of 100) |
+| `field_1_position` | `23` | Vertical position as % of compass height |
+| `field_1_fontcolor` | `#29B6CF` | Text color. Supports `#RRGGBBAA` |
 | `field_1_unit` | `''` | Unit text |
-| `field_1_fontsize` | — | Font size in em |
-| `field_1_fontcolor` | — | Font color. Supports `#RRGGBBAA` |
-| `field_1_unit_fontsize` | — | Unit font size relative to field font size |
-| `field_1_unit_fontcolor` | — | Unit font color |
+| `field_1_unit_fontsize` | `1.0` | Unit font size relative to field font size |
+| `field_1_unit_fontweight` | `400` | Unit font weight (100–900) |
+| `field_1_unit_fontcolor` | `#196D7C` | Unit color |
+
+Field 2 defaults: hidden by default, position `50`  
+Field 3 defaults: position `79`, fontsize `1.4`, fontcolor `#808080`
 
 ---
 
