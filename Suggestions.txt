@@ -1,0 +1,10 @@
+Suggestions for future improvements:
+
+1. Multiple needles — visualise more than one bearing on the same compass face
+2. A second entity input — drive each needle from an independent sensor/attribute
+3. Needle trail / history arc — a fading arc showing the last N degrees of movement
+4. Target/waypoint marker — a fixed marker on the dial at a configurable bearing
+5. Animated smooth rotation — CSS transition so the needle swings and settles rather than snapping
+6. Colour zones on the bezel — highlighted arcs for ranges of bearing (e.g. safe/danger zones)
+7. North offset / magnetic declination — a dedicated correction separate from compass_adjustment
+8. Bidirectional needle — both ends of the needle are meaningful and independently coloured
