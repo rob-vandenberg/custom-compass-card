@@ -1,7 +1,7 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.4.109';
+const CARD_VERSION = '3.4.110';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -679,7 +679,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-template-grid">
         <div class="text-field">
-          <label>Footer ((jinja template allowed))</label>
+          <label>Footer (jinja template allowed)</label>
           <ha-textfield
             .value=${c.footer_text}
             @input=${e => this._valueChanged('footer_text', e)}
