@@ -1,33 +1,14 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.2.101';
-// ─── Card Version History ─────────────────────────────────────────────────────
-// v3.2.101: Header/footer use calc(±10px + position) for translateY; padding reduced to 10px
-// v3.2.100: Adjust header/footer natural position via padding; set default fontsize to 2.0
-// v3.2.99: Add template support to header/footer; reorder DEFAULT_CONFIG; rename dirs to directions
-// v3.2.98: Add optional header and footer text above/below compass circle
-// v3.2.97: Fix getCompassDirection: build all 16 directions from the 4 configured cardinals
-// v3.2.96: Fix Bezel labels in editor; fix getCompassDirection to use configured cardinals
-// v3.2.95: Update defaults: needle shape/color, tick marks visible, field_2 hidden
-// v3.2.94: Add Template label to field template inputs; consolidate unit fields onto one row
-// v3.2.93: Add fontweight and position to custom fields; remove hardcoded field top positions
-// v3.2.92: Update default values for tick marks and cardinals
-// v3.2.91: Cardinals get own fontsize/fontweight/position/fontcolor; rename cardinal_labels_show to cardinals_show
-// v3.2.90: Add cardinal_color; rename major_ticks_cardinals to cardinal_labels_show; use cardinal_color in rendering
-// v3.2.89: Fix cardinal labels filtered out by show flag: return show:true from cardinal branch
-// v3.2.88: Fix cardinal labels not rendering: remove dependency on major_ticks_show flag
-// v3.2.87: Add configurable cardinal labels (N/E/S/W); mutual exclusion between Cardinal labels and Primary ticks toggles in UI editor
-// v3.2.86: Replace all string-based config key lookups with explicit fieldDefs lookup objects in _updateTemplates, _fieldStyle, _unitStyle and renderField
-// v3.2.85: Add cardinals flag to tickDefs; replace hardcoded string comparison with def.cardinals boolean
-// v3.2.84: Replace string-based config key lookup with explicit tickDefs lookup object
-// v3.2.83: Fix tick mark rendering: correct config key pattern from tick_major_ to major_ticks_ after variable rename
+const CARD_VERSION = '3.3.106';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
   compass_entity:           'sun.sun',
   compass_attribute:        'azimuth',
   compass_adjustment:       0,
+  rotation_animation_time: 0.3,
   background_color:         '#101010',
   bezel_color:              '#383838',
   bezel_width:              16,
@@ -35,6 +16,7 @@ const DEFAULT_CONFIG = {
   needle_show:              true,
   needle_invert:            false,
   needle_rotate:            false,
+  compass_rotate:           false,
   needle_color_1:           '#FF0000',
   needle_color_1_pos:       50,
   needle_color_2:           '#EEEEEE',
@@ -181,7 +163,7 @@ class CustomCompassCardEditor extends LitElement {
 
     return html`
 
-	  <h2 style="margin-top: 0; margin-bottom: 16px;">Compass configuration</h2>
+	  <h2 style="margin-top: 0;">Compass configuration</h2>
 
       <!-- Entity -->
       <div class="compass-entity-grid">
@@ -233,32 +215,43 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
       </div>
+
+      <!-- Compass toggles -->
+      <div class="compass-toggles-grid">
+        <div class="toggle-field">
+          <label>Rotate compass</label>
+          <ha-switch
+            .checked=${c.compass_rotate}
+            @change=${e => this._valueChanged('compass_rotate', e)}
+          ></ha-switch>
+        </div>
+      </div>
 	  
 	  <h2>Needle configuration</h2>
 
       <!-- Needle toggles -->
       <div class="needle-toggles-grid">
-        <ha-formfield>
+        <div class="toggle-field">
           <label>Show needle</label>
           <ha-switch
             .checked=${c.needle_show}
             @change=${e => this._valueChanged('needle_show', e)}
           ></ha-switch>
-        </ha-formfield>
-        <ha-formfield>
+        </div>  
+        <div class="toggle-field">
           <label>Invert needle</label>
           <ha-switch
             .checked=${c.needle_invert}
             @change=${e => this._valueChanged('needle_invert', e)}
           ></ha-switch>
-        </ha-formfield>
-        <ha-formfield>
+        </div>  
+        <div class="toggle-field">
           <label>Rotate needle</label>
           <ha-switch
             .checked=${c.needle_rotate}
             @change=${e => this._valueChanged('needle_rotate', e)}
           ></ha-switch>
-        </ha-formfield>
+        </div>  
       </div>
 
       <!-- Needle colors -->
@@ -331,14 +324,16 @@ class CustomCompassCardEditor extends LitElement {
 
       <!-- Cardinal labels -->
       <div class="tickmark-toggles-grid">
-        <label>Cardinal labels</label>
-        <ha-switch
-          .checked=${c.cardinals_show}
-          @change=${e => {
-            this._valueChanged('cardinals_show', e);
-            if (e.target.checked) this._valueChanged('major_ticks_show', { target: { tagName: 'HA-SWITCH', checked: false } });
-          }}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Cardinal labels</label>
+          <ha-switch
+            .checked=${c.cardinals_show}
+            @change=${e => {
+              this._valueChanged('cardinals_show', e);
+              if (e.target.checked) this._valueChanged('major_ticks_show', { target: { tagName: 'HA-SWITCH', checked: false } });
+            }}
+          ></ha-switch>
+        </div>
       </div>
       <div class="cardinal-labels-grid">
         <div class="text-field">
@@ -400,14 +395,16 @@ class CustomCompassCardEditor extends LitElement {
 
       <!-- Primary ticks -->
       <div class="tickmark-toggles-grid">
-        <label>Primary ticks</label>
-        <ha-switch
-          .checked=${c.major_ticks_show}
-          @change=${e => {
-            this._valueChanged('major_ticks_show', e);
-            if (e.target.checked) this._valueChanged('cardinals_show', { target: { tagName: 'HA-SWITCH', checked: false } });
-          }}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Primary ticks</label>
+          <ha-switch
+            .checked=${c.major_ticks_show}
+            @change=${e => {
+              this._valueChanged('major_ticks_show', e);
+              if (e.target.checked) this._valueChanged('cardinals_show', { target: { tagName: 'HA-SWITCH', checked: false } });
+            }}
+          ></ha-switch>
+        </div>
       </div>
       <div class="tickmark-styling-grid">
         <div class="text-field">
@@ -439,11 +436,13 @@ class CustomCompassCardEditor extends LitElement {
 
       <!-- Medium ticks -->
       <div class="tickmark-toggles-grid">
-        <label>Secondary ticks</label>
-        <ha-switch
-          .checked=${c.minor_ticks_show}
-          @change=${e => this._valueChanged('minor_ticks_show', e)}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Secondary ticks</label>
+          <ha-switch
+            .checked=${c.minor_ticks_show}
+            @change=${e => this._valueChanged('minor_ticks_show', e)}
+          ></ha-switch>
+        </div>
       </div>
       <div class="tickmark-styling-grid">
         <div class="text-field">
@@ -475,11 +474,13 @@ class CustomCompassCardEditor extends LitElement {
 
       <!-- Micro ticks -->
       <div class="tickmark-toggles-grid">
-        <label>Tertiary ticks</label>
-        <ha-switch
-          .checked=${c.micro_ticks_show}
-          @change=${e => this._valueChanged('micro_ticks_show', e)}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Tertiary ticks</label>
+          <ha-switch
+            .checked=${c.micro_ticks_show}
+            @change=${e => this._valueChanged('micro_ticks_show', e)}
+          ></ha-switch>
+        </div>
       </div>
       <div class="tickmark-styling-grid">
         <div class="text-field">
@@ -509,15 +510,17 @@ class CustomCompassCardEditor extends LitElement {
         ${this._colorPicker('micro_ticks_color', 'Color')}
       </div>
 
-	  <h2 style="margin-bottom: 0px;">Header &amp; Footer</h2>
+	  <h2>Header &amp; Footer configuration</h2>
 
       <!-- Header -->
       <div class="field-toggles-grid">
-        <label>Show header</label>
-        <ha-switch
-          .checked=${c.header_show}
-          @change=${e => this._valueChanged('header_show', e)}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Show header</label>
+          <ha-switch
+            .checked=${c.header_show}
+            @change=${e => this._valueChanged('header_show', e)}
+          ></ha-switch>
+        </div>
       </div>
       <div class="field-template-grid">
         <div class="text-field">
@@ -528,7 +531,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
           <ha-textfield
@@ -558,11 +561,13 @@ class CustomCompassCardEditor extends LitElement {
 
       <!-- Footer -->
       <div class="field-toggles-grid">
-        <label>Show footer</label>
-        <ha-switch
-          .checked=${c.footer_show}
-          @change=${e => this._valueChanged('footer_show', e)}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Show footer</label>
+          <ha-switch
+            .checked=${c.footer_show}
+            @change=${e => this._valueChanged('footer_show', e)}
+          ></ha-switch>
+        </div>
       </div>
       <div class="field-template-grid">
         <div class="text-field">
@@ -573,7 +578,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
           <ha-textfield
@@ -601,15 +606,17 @@ class CustomCompassCardEditor extends LitElement {
         ${this._colorPicker('footer_fontcolor', 'Color')}
       </div>
 
-	  <h2 style="margin-bottom: 0px;">Custom fields configuration</h2>
+	  <h2>Custom fields configuration</h2>
 
       <!-- Field 1 -->
       <div class="field-toggles-grid">
-        <label>Show Field 1</label>
-        <ha-switch
-          .checked=${c.field_1_show}
-          @change=${e => this._valueChanged('field_1_show', e)}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Show Field 1</label>
+          <ha-switch
+            .checked=${c.field_1_show}
+            @change=${e => this._valueChanged('field_1_show', e)}
+          ></ha-switch>
+        </div>
       </div>
       <div class="field-template-grid">
         <div class="text-field">
@@ -620,7 +627,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
           <ha-textfield
@@ -677,11 +684,13 @@ class CustomCompassCardEditor extends LitElement {
 
       <!-- Field 2 -->
       <div class="field-toggles-grid">
-        <label>Show Field 2</label>
-        <ha-switch
-          .checked=${c.field_2_show}
-          @change=${e => this._valueChanged('field_2_show', e)}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Show Field 2</label>
+          <ha-switch
+            .checked=${c.field_2_show}
+            @change=${e => this._valueChanged('field_2_show', e)}
+          ></ha-switch>
+        </div>
       </div>
       <div class="field-template-grid">
         <div class="text-field">
@@ -692,7 +701,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
           <ha-textfield
@@ -749,11 +758,13 @@ class CustomCompassCardEditor extends LitElement {
 
       <!-- Field 3 -->
       <div class="field-toggles-grid">
-        <label>Show Field 3</label>
-        <ha-switch
-          .checked=${c.field_3_show}
-          @change=${e => this._valueChanged('field_3_show', e)}
-        ></ha-switch>
+        <div class="toggle-field">
+          <label>Show Field 3</label>
+          <ha-switch
+            .checked=${c.field_3_show}
+            @change=${e => this._valueChanged('field_3_show', e)}
+          ></ha-switch>
+        </div>
       </div>
       <div class="field-template-grid">
         <div class="text-field">
@@ -764,7 +775,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
           <ha-textfield
@@ -827,7 +838,7 @@ class CustomCompassCardEditor extends LitElement {
     }
 
     h2 {
-      margin-top: 32px;
+      margin-top: 40px;
       margin-bottom: 0px;
     }
 
@@ -835,6 +846,8 @@ class CustomCompassCardEditor extends LitElement {
       display: grid;
       grid-template-columns: 5fr 4fr 3fr;
       gap: 8px;
+      margin-top: 24px;
+      margin-bottom: 16px;
     }
 
     .compass-styling-grid {
@@ -845,16 +858,20 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 16px;
     }
 
+    .compass-toggles-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 28px;
+      margin-bottom: 16px;
+    }
+
     .needle-toggles-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
-      margin-top: 20px;
-      margin-bottom: 15px;
-    }
-    .needle-toggles-grid label {
-      font-size: 14px;
-      margin-right: 12px;
+      margin-top: 28px;
+      margin-bottom: 16px;
     }
 
     .needle-color-grid {
@@ -873,24 +890,20 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 16px;
     }
 
+    .tickmark-toggles-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 28px;
+      margin-bottom: 16px;
+    }
+
     .cardinal-labels-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1fr;
       gap: 8px;
       margin-top: 8px;
       margin-bottom: 8px;
-    }
-
-    .tickmark-toggles-grid {
-      display: flex;
-      align-items: center;
-      margin-top: 40px;
-      margin-bottom: 15px;
-    }
-    .tickmark-toggles-grid label {
-      font-size: 14px;
-      margin-right: 12px;
-      min-width: 120px;
     }
 
     .tickmark-styling-grid {
@@ -903,15 +916,11 @@ class CustomCompassCardEditor extends LitElement {
     }
 
     .field-toggles-grid {
-      display: flex;
-      align-items: center;
-      margin-top: 40px;
-      margin-bottom: 15px;
-    }
-    .field-toggles-grid label {
-      font-size: 14px;
-      margin-right: 12px;
-      min-width: 120px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 28px;
+      margin-bottom: 16px;
     }
 
     .field-template-grid {
@@ -919,6 +928,15 @@ class CustomCompassCardEditor extends LitElement {
       grid-template-columns: 1fr;
       gap: 8px;
       margin-top: 8px;
+    }
+
+    .field-styling-grid {
+      display: grid;
+      grid-template-columns: 2fr 2fr 2fr 3fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      align-items: end;
     }
 
     .field-unit-grid {
@@ -938,6 +956,18 @@ class CustomCompassCardEditor extends LitElement {
       font-size: 12px;
       font-weight: 600;
       color: var(--secondary-text-color);
+    }
+
+    .toggle-field {
+      display: flex;
+      flex-direction: row;
+      gap: 4px;
+    }
+    .toggle-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+      min-width: 98px;
     }
 
     .color-field {
@@ -1036,11 +1066,17 @@ class CustomCompassCard extends LitElement {
       const raw = parseFloat(valueToParse);
 
       if (!isNaN(raw)) {
-        const adj        = parseFloat(this.config.compass_adjustment) || 0;
-        const newDegrees = ((raw + adj) % 360 + 360) % 360;
-        if (newDegrees !== this._prevDegrees) {
-          this._degrees        = newDegrees;
-          this._prevDegrees    = newDegrees;
+        const adj            = parseFloat(this.config.compass_adjustment) || 0;
+        const targetNormalized = ((raw + adj) % 360 + 360) % 360;
+        if (targetNormalized !== this._prevDegrees) {
+          // Shortest-arc: compute delta clamped to [-180, 180] so the CSS
+          // transition always animates the short way around the dial.
+          const currentMod = ((this._degrees % 360) + 360) % 360;
+          let delta = targetNormalized - currentMod;
+          if (delta > 180) delta -= 360;
+          if (delta < -180) delta += 360;
+          this._degrees        = this._degrees + delta;
+          this._prevDegrees    = targetNormalized;
           this._templatesDirty = true;
         }
         this._error = false;
@@ -1123,6 +1159,8 @@ class CustomCompassCard extends LitElement {
     this.style.setProperty('--cc-needle-height',   `${initH   * scale}px`);
     this.style.setProperty('--cc-needle-position', `${initPos * scale}px`);
 
+    this.style.setProperty('--cc-animation-duration', `${this.config.rotation_animation_time}s`);
+
     const wrapper = this.shadowRoot.querySelector('.compass-ticks-wrapper');
     if (wrapper) {
       this.style.setProperty('--cc-circle-size', `${wrapper.offsetWidth}px`);
@@ -1142,6 +1180,7 @@ class CustomCompassCard extends LitElement {
   }
 
   getCompassDirection(degrees) {
+    const normalized = ((degrees % 360) + 360) % 360;
     const N = this.config.cardinal_north;
     const E = this.config.cardinal_east;
     const S = this.config.cardinal_south;
@@ -1152,7 +1191,7 @@ class CustomCompassCard extends LitElement {
       S, S+S+W, S+W, W+S+W,
       W, W+N+W, N+W, N+N+W,
     ];
-    return directions[Math.floor((degrees + 11.25) / 22.5) % 16];
+    return directions[Math.floor((normalized + 11.25) / 22.5) % 16];
   }
 
   _buildNeedlePath(morph, curve, invert, position) {
@@ -1234,7 +1273,7 @@ class CustomCompassCard extends LitElement {
     };
   }
 
-  _renderTicks() {
+  _renderTicks(ticksTransform = 'none') {
     const c   = this.config;
     const cx  = 50, cy = 50, r = 50;
 
@@ -1279,7 +1318,7 @@ class CustomCompassCard extends LitElement {
     });
 
     return html`
-      <div class="compass-ticks-wrapper">
+      <div class="compass-ticks-wrapper" style="transform:${ticksTransform}">
         <svg class="compass-ticks" viewBox="0 0 100 100" preserveAspectRatio="none">
           ${ticks.map(t => {
             if (!t.show) return '';
@@ -1314,9 +1353,16 @@ class CustomCompassCard extends LitElement {
   render() {
     const c = this.config || {};
 
-    // Wrapper rotation: base degrees + 180 if rotate toggle is active
-    const wrapperRotation  = c.needle_rotate ? this._degrees + 180 : this._degrees;
-    const wrapperTransform = `rotate(${wrapperRotation}deg)`;
+    // Rotation: in compass_rotate mode the dial spins and the needle stays north;
+    // in normal mode the needle rotates and the dial stays fixed.
+    let needleTransform, ticksTransform;
+    if (c.compass_rotate) {
+      ticksTransform  = `rotate(${-this._degrees}deg)`;
+      needleTransform = `rotate(${c.needle_rotate ? 180 : 0}deg)`;
+    } else {
+      ticksTransform  = 'none';
+      needleTransform = `rotate(${c.needle_rotate ? this._degrees + 180 : this._degrees}deg)`;
+    }
 
     const fieldDefs = [
       { index: 1, show: c.field_1_show, unit: c.field_1_unit, fontsize: parseFloat(c.field_1_fontsize), fontweight: c.field_1_fontweight, position: c.field_1_position, fontcolor: c.field_1_fontcolor, unit_fontsize: parseFloat(c.field_1_unit_fontsize), unit_fontweight: c.field_1_unit_fontweight, unit_fontcolor: c.field_1_unit_fontcolor },
@@ -1361,8 +1407,8 @@ class CustomCompassCard extends LitElement {
             ${renderField(fieldDefs[1], this._field2Value)}
             ${renderField(fieldDefs[2], this._field3Value)}
           </div>
-          ${this._renderTicks()}
-          <div class="compass-needle-wrapper" style="transform:${wrapperTransform}">
+          ${this._renderTicks(ticksTransform)}
+          <div class="compass-needle-wrapper" style="transform:${needleTransform}">
             ${c.needle_show ? html`
               <svg class="compass-needle"
                    viewBox="${viewBox}"
@@ -1446,6 +1492,7 @@ class CustomCompassCard extends LitElement {
       align-items: center;
       z-index: 1;
       pointer-events: none;
+      transition: transform var(--cc-animation-duration, 0.3s) ease-out;
     }
     .compass-ticks {
       position: absolute;
@@ -1463,6 +1510,7 @@ class CustomCompassCard extends LitElement {
       justify-content: center;
       align-items: center;
       z-index: 2;
+      transition: transform var(--cc-animation-duration, 0.3s) ease-out;
     }
     .compass-needle {
       position: absolute;
