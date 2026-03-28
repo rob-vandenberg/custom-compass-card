@@ -109,6 +109,27 @@ The needle supports a two-color gradient, invert (swap tip and tail), and rotate
 
 ---
 
+## Compass rotation
+
+By default the compass dial is fixed and the needle rotates to point at the current bearing. Enabling **Rotate compass** inverts this: the needle stays fixed pointing north and the dial rotates beneath it, exactly like the heading indicator in an aircraft cockpit or a nautical chart compass.
+
+This mode makes most sense when the entity represents a heading — a vehicle, vessel, or aircraft — where the question being answered is *"where am I pointed relative to north?"* rather than *"where is something pointing?"*
+
+| Mode | Dial | Needle | Typical use |
+|------|------|--------|-------------|
+| Default | Fixed | Rotates to bearing | Wind direction, sun azimuth, any direction finder |
+| Rotate compass | Rotates | Fixed north | Vehicle heading, vessel course, aircraft heading indicator |
+
+The **Rotate needle** toggle continues to work in both modes — it flips the needle 180°, useful if the sensor reports the reciprocal bearing.
+
+### Animation
+
+All rotation — whether needle or dial — is animated with a smooth transition. The rotation always takes the shortest arc to the new bearing, so a change from 359° to 1° animates 2° counterclockwise rather than sweeping 358° the long way round. This matters especially for wind direction, which can shift by large amounts rapidly.
+
+The transition duration defaults to 0.3 seconds and can be adjusted via YAML using `rotation_animation_time`.
+
+---
+
 ## Tick marks
 
 Three tiers of tick marks can be drawn around the border ring:
@@ -165,6 +186,8 @@ Both header and footer support Jinja2 template expressions, the same as text fie
 | `compass_entity` | `sun.sun` | Entity providing the bearing (0–360°) |
 | `compass_attribute` | `azimuth` | Attribute to read. Leave empty to use the entity state |
 | `compass_adjustment` | `0` | Degrees to add to the raw value before rendering |
+| `compass_rotate` | `false` | Rotate the dial instead of the needle. See Compass rotation section |
+| `rotation_animation_time` | `0.3` | Rotation transition duration in seconds. YAML only |
 | `background_color` | `#101010` | Compass circle background. Supports `#RRGGBBAA` |
 | `bezel_color` | `#383838` | Border ring color. Supports `#RRGGBBAA` |
 | `bezel_width` | `16` | Border ring width |
