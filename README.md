@@ -150,6 +150,26 @@ Cardinal labels and major tick marks are mutually exclusive in the editor — en
 
 ---
 
+## Markers
+
+Two markers can be placed on the compass dial at any fixed bearing. Each marker is an inverted triangle that points inward toward the center, sitting just outside the bezel edge by default.
+
+Markers are useful for indicating a reference bearing — a target wind angle, a solar panel orientation, a waypoint direction, or any other fixed point of interest. Because markers live on the same layer as the tick marks, they behave identically in both rotation modes: they stay fixed on the dial in normal mode, and rotate with the dial in **Rotate compass** mode, which is exactly the correct behaviour for a fixed real-world bearing.
+
+The two markers are independent and fully configurable. By default marker 1 is red and marker 2 is blue, but any color is accepted.
+
+### Position
+
+`marker_position` controls how far the marker sits from the bezel edge:
+
+| Value | Effect |
+|-------|--------|
+| `0` | Tip of the triangle touches the bezel edge (default) |
+| positive | Marker moves outward, away from the dial |
+| negative | Marker moves inward, overlapping the bezel |
+
+---
+
 ## Text fields
 
 Three text fields can be displayed inside the compass at configurable vertical positions. Each field shows a value and an optional unit, with independent font size, font weight, and color controls for both the value and the unit.
@@ -238,6 +258,21 @@ Replace `major` with `minor` or `micro` for the other tiers.
 
 Minor defaults: length `3`, width `1.5`, position `-4.5`, color `#AAAAAA`  
 Micro defaults: length `0`, width `2`, position `-6.5`, color `#888888`
+
+### Markers
+
+Replace `1` with `2` for the second marker.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `marker_1_show` | `false` | Show or hide |
+| `marker_1_degrees` | `30` | Fixed bearing in degrees (0–359) |
+| `marker_1_length` | `5` | Triangle height |
+| `marker_1_width` | `4` | Triangle base width |
+| `marker_1_position` | `0` | Offset from bezel edge. Positive = outward, negative = inward |
+| `marker_1_color` | `#FF0000` | Fill color. Supports `#RRGGBBAA` |
+
+Marker 2 defaults: degrees `330`, color `#2196F3`
 
 ### Header and footer
 

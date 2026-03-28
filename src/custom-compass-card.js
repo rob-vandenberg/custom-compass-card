@@ -1,14 +1,40 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.3.106';
+const CARD_VERSION = '3.4.108';
+// ─── Card Version History ─────────────────────────────────────────────────────
+// v3.4.108: Rename tickmark→tick throughout; add marker_1 and marker_2 (fixed bearing triangle markers on tick layer)
+// v3.4.107: Rename tickmark→tick throughout; add marker_1 and marker_2 (fixed bearing triangle markers on tick layer)
+// v3.3.106: Rename needle_animation_duration to rotation_animation_time
+// v3.3.105: Smooth needle animation via CSS transition; shortest-arc rotation to avoid wrap-around sweep; needle_animation_duration default config key
+// v3.3.104: Consistent toggle-field pattern across all editor sections; field-styling-grid for template-type fields
+// v3.3.103: Move "Rotate compass" toggle to compass configuration block above Needle section
+// v3.3.102: Add compass_rotate mode: dial rotates, needle stays fixed pointing north; replace ha-formfield in needle toggles with label+ha-switch pattern
+// v3.2.101: Header/footer use calc(±10px + position) for translateY; padding reduced to 10px
+// v3.2.100: Adjust header/footer natural position via padding; set default fontsize to 2.0
+// v3.2.99: Add template support to header/footer; reorder DEFAULT_CONFIG; rename dirs to directions
+// v3.2.98: Add optional header and footer text above/below compass circle
+// v3.2.97: Fix getCompassDirection: build all 16 directions from the 4 configured cardinals
+// v3.2.96: Fix Bezel labels in editor; fix getCompassDirection to use configured cardinals
+// v3.2.95: Update defaults: needle shape/color, tick marks visible, field_2 hidden
+// v3.2.94: Add Template label to field template inputs; consolidate unit fields onto one row
+// v3.2.93: Add fontweight and position to custom fields; remove hardcoded field top positions
+// v3.2.92: Update default values for tick marks and cardinals
+// v3.2.91: Cardinals get own fontsize/fontweight/position/fontcolor; rename cardinal_labels_show to cardinals_show
+// v3.2.90: Add cardinal_color; rename major_ticks_cardinals to cardinal_labels_show; use cardinal_color in rendering
+// v3.2.89: Fix cardinal labels filtered out by show flag: return show:true from cardinal branch
+// v3.2.88: Fix cardinal labels not rendering: remove dependency on major_ticks_show flag
+// v3.2.87: Add configurable cardinal labels (N/E/S/W); mutual exclusion between Cardinal labels and Primary ticks toggles in UI editor
+// v3.2.86: Replace all string-based config key lookups with explicit fieldDefs lookup objects in _updateTemplates, _fieldStyle, _unitStyle and renderField
+// v3.2.85: Add cardinals flag to tickDefs; replace hardcoded string comparison with def.cardinals boolean
+// v3.2.84: Replace string-based config key lookup with explicit tickDefs lookup object
+// v3.2.83: Fix tick mark rendering: correct config key pattern from tick_major_ to major_ticks_ after variable rename
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
   compass_entity:           'sun.sun',
   compass_attribute:        'azimuth',
   compass_adjustment:       0,
-  rotation_animation_time: 0.3,
   background_color:         '#101010',
   bezel_color:              '#383838',
   bezel_width:              16,
@@ -26,6 +52,18 @@ const DEFAULT_CONFIG = {
   needle_position:          -10,
   needle_morph:             50,
   needle_curve:             0,
+  marker_1_show:            false,
+  marker_1_degrees:         45,
+  marker_1_length:          5,
+  marker_1_width:           4,
+  marker_1_position:        0,
+  marker_1_color:           '#FF0000',
+  marker_2_show:            false,
+  marker_2_degrees:         315,
+  marker_2_length:          5,
+  marker_2_width:           4,
+  marker_2_position:        0,
+  marker_2_color:           '#2196F3',
   cardinals_show:           false,
   cardinal_north:           'N',
   cardinal_east:            'E',
@@ -92,6 +130,7 @@ const DEFAULT_CONFIG = {
   field_3_unit_fontsize:    1.4,
   field_3_unit_fontweight:  400,
   field_3_unit_fontcolor:   '#606060',
+  rotation_animation_time:  0.3,  
 };
 
 // ─── Visual Editor ────────────────────────────────────────────────────────────
@@ -320,10 +359,104 @@ class CustomCompassCardEditor extends LitElement {
         </div>
       </div>
 
-	  <h2>Tickmarks configuration</h2>
+	  <h2>Markers configuration</h2>
+
+      <!-- Marker 1 -->
+      <div class="marker-toggles-grid">
+        <div class="toggle-field">
+          <label>Show marker 1</label>
+          <ha-switch
+            .checked=${c.marker_1_show}
+            @change=${e => this._valueChanged('marker_1_show', e)}
+          ></ha-switch>
+        </div>
+      </div>
+      <div class="marker-styling-grid">
+        <div class="text-field">
+          <label>Degrees</label>
+          <ha-textfield
+            type="number" step="1" min="0" max="359"
+            .value=${String(c.marker_1_degrees)}
+            @input=${e => this._valueChanged('marker_1_degrees', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Length</label>
+          <ha-textfield
+            type="number" step="0.1" min="0"
+            .value=${String(c.marker_1_length)}
+            @input=${e => this._valueChanged('marker_1_length', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Width</label>
+          <ha-textfield
+            type="number" step="0.1" min="0"
+            .value=${String(c.marker_1_width)}
+            @input=${e => this._valueChanged('marker_1_width', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Position</label>
+          <ha-textfield
+            type="number" step="0.5"
+            .value=${String(c.marker_1_position)}
+            @input=${e => this._valueChanged('marker_1_position', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('marker_1_color', 'Color')}
+      </div>
+
+      <!-- Marker 2 -->
+      <div class="marker-toggles-grid">
+        <div class="toggle-field">
+          <label>Show marker 2</label>
+          <ha-switch
+            .checked=${c.marker_2_show}
+            @change=${e => this._valueChanged('marker_2_show', e)}
+          ></ha-switch>
+        </div>
+      </div>
+      <div class="marker-styling-grid">
+        <div class="text-field">
+          <label>Degrees</label>
+          <ha-textfield
+            type="number" step="1" min="0" max="359"
+            .value=${String(c.marker_2_degrees)}
+            @input=${e => this._valueChanged('marker_2_degrees', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Length</label>
+          <ha-textfield
+            type="number" step="0.1" min="0"
+            .value=${String(c.marker_2_length)}
+            @input=${e => this._valueChanged('marker_2_length', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Width</label>
+          <ha-textfield
+            type="number" step="0.1" min="0"
+            .value=${String(c.marker_2_width)}
+            @input=${e => this._valueChanged('marker_2_width', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Position</label>
+          <ha-textfield
+            type="number" step="0.5"
+            .value=${String(c.marker_2_position)}
+            @input=${e => this._valueChanged('marker_2_position', e)}
+          ></ha-textfield>
+        </div>
+        ${this._colorPicker('marker_2_color', 'Color')}
+      </div>
+
+	  <h2>Ticks configuration</h2>
 
       <!-- Cardinal labels -->
-      <div class="tickmark-toggles-grid">
+      <div class="tick-toggles-grid">
         <div class="toggle-field">
           <label>Cardinal labels</label>
           <ha-switch
@@ -365,7 +498,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="tick-styling-grid">
         <div class="text-field">
           <label>Font size</label>
           <ha-textfield
@@ -394,7 +527,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
 
       <!-- Primary ticks -->
-      <div class="tickmark-toggles-grid">
+      <div class="tick-toggles-grid">
         <div class="toggle-field">
           <label>Primary ticks</label>
           <ha-switch
@@ -406,7 +539,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-switch>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="tick-styling-grid">
         <div class="text-field">
           <label>Length</label>
           <ha-textfield
@@ -435,7 +568,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
 
       <!-- Medium ticks -->
-      <div class="tickmark-toggles-grid">
+      <div class="tick-toggles-grid">
         <div class="toggle-field">
           <label>Secondary ticks</label>
           <ha-switch
@@ -444,7 +577,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-switch>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="tick-styling-grid">
         <div class="text-field">
           <label>Length</label>
           <ha-textfield
@@ -473,7 +606,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
 
       <!-- Micro ticks -->
-      <div class="tickmark-toggles-grid">
+      <div class="tick-toggles-grid">
         <div class="toggle-field">
           <label>Tertiary ticks</label>
           <ha-switch
@@ -482,7 +615,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-switch>
         </div>
       </div>
-      <div class="tickmark-styling-grid">
+      <div class="tick-styling-grid">
         <div class="text-field">
           <label>Length</label>
           <ha-textfield
@@ -890,7 +1023,7 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 16px;
     }
 
-    .tickmark-toggles-grid {
+    .tick-toggles-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 8px;
@@ -906,7 +1039,7 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 8px;
     }
 
-    .tickmark-styling-grid {
+    .tick-styling-grid {
       display: grid;
       grid-template-columns: 2fr 2fr 2fr 3fr;
       gap: 8px;
@@ -944,6 +1077,23 @@ class CustomCompassCardEditor extends LitElement {
       grid-template-columns: 2fr 1fr 1fr 2fr;
       gap: 8px;
       margin-top: 8px;
+      align-items: end;
+    }
+
+    .marker-toggles-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 28px;
+      margin-bottom: 16px;
+    }
+
+    .marker-styling-grid {
+      display: grid;
+      grid-template-columns: 4fr 4fr 4fr 4fr 7fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
       align-items: end;
     }
 
@@ -1317,6 +1467,34 @@ class CustomCompassCard extends LitElement {
       return { show, type: 'line', x1, y1, x2, y2, color, width };
     });
 
+    // Build marker triangles — inverted triangle pointing inward at a fixed bearing
+    const markerDefs = [
+      { show: c.marker_1_show, degrees: parseFloat(c.marker_1_degrees), length: parseFloat(c.marker_1_length), width: parseFloat(c.marker_1_width), position: parseFloat(c.marker_1_position), color: c.marker_1_color },
+      { show: c.marker_2_show, degrees: parseFloat(c.marker_2_degrees), length: parseFloat(c.marker_2_length), width: parseFloat(c.marker_2_width), position: parseFloat(c.marker_2_position), color: c.marker_2_color },
+    ];
+
+    const markers = markerDefs.map(m => {
+      if (!m.show) return null;
+      const angle  = m.degrees * Math.PI / 180;
+      const sinA   = Math.sin(angle);
+      const cosA   = Math.cos(angle);
+      // Tip: on the bezel edge + position offset
+      const tipR   = r + m.position;
+      const tx     = cx + tipR * sinA;
+      const ty     = cy - tipR * cosA;
+      // Base: outward from tip by length
+      const baseR  = tipR + m.length;
+      const baseCx = cx + baseR * sinA;
+      const baseCy = cy - baseR * cosA;
+      // Base corners: perpendicular to radial direction, ±width/2
+      const half   = m.width / 2;
+      const b1x    = baseCx + half * cosA;
+      const b1y    = baseCy + half * sinA;
+      const b2x    = baseCx - half * cosA;
+      const b2y    = baseCy - half * sinA;
+      return { color: m.color, path: `M ${tx},${ty} L ${b1x},${b1y} L ${b2x},${b2y} Z` };
+    }).filter(Boolean);
+
     return html`
       <div class="compass-ticks-wrapper" style="transform:${ticksTransform}">
         <svg class="compass-ticks" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -1337,6 +1515,9 @@ class CustomCompassCard extends LitElement {
                     stroke="${t.color}" stroke-width="${t.width}" stroke-linecap="round"/>
             `;
           })}
+          ${markers.map(m => svg`
+            <path d="${m.path}" fill="${m.color}" />
+          `)}
         </svg>
       </div>
     `;
