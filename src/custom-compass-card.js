@@ -1,34 +1,7 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.4.108';
-// ─── Card Version History ─────────────────────────────────────────────────────
-// v3.4.108: Rename tickmark→tick throughout; add marker_1 and marker_2 (fixed bearing triangle markers on tick layer)
-// v3.4.107: Rename tickmark→tick throughout; add marker_1 and marker_2 (fixed bearing triangle markers on tick layer)
-// v3.3.106: Rename needle_animation_duration to rotation_animation_time
-// v3.3.105: Smooth needle animation via CSS transition; shortest-arc rotation to avoid wrap-around sweep; needle_animation_duration default config key
-// v3.3.104: Consistent toggle-field pattern across all editor sections; field-styling-grid for template-type fields
-// v3.3.103: Move "Rotate compass" toggle to compass configuration block above Needle section
-// v3.3.102: Add compass_rotate mode: dial rotates, needle stays fixed pointing north; replace ha-formfield in needle toggles with label+ha-switch pattern
-// v3.2.101: Header/footer use calc(±10px + position) for translateY; padding reduced to 10px
-// v3.2.100: Adjust header/footer natural position via padding; set default fontsize to 2.0
-// v3.2.99: Add template support to header/footer; reorder DEFAULT_CONFIG; rename dirs to directions
-// v3.2.98: Add optional header and footer text above/below compass circle
-// v3.2.97: Fix getCompassDirection: build all 16 directions from the 4 configured cardinals
-// v3.2.96: Fix Bezel labels in editor; fix getCompassDirection to use configured cardinals
-// v3.2.95: Update defaults: needle shape/color, tick marks visible, field_2 hidden
-// v3.2.94: Add Template label to field template inputs; consolidate unit fields onto one row
-// v3.2.93: Add fontweight and position to custom fields; remove hardcoded field top positions
-// v3.2.92: Update default values for tick marks and cardinals
-// v3.2.91: Cardinals get own fontsize/fontweight/position/fontcolor; rename cardinal_labels_show to cardinals_show
-// v3.2.90: Add cardinal_color; rename major_ticks_cardinals to cardinal_labels_show; use cardinal_color in rendering
-// v3.2.89: Fix cardinal labels filtered out by show flag: return show:true from cardinal branch
-// v3.2.88: Fix cardinal labels not rendering: remove dependency on major_ticks_show flag
-// v3.2.87: Add configurable cardinal labels (N/E/S/W); mutual exclusion between Cardinal labels and Primary ticks toggles in UI editor
-// v3.2.86: Replace all string-based config key lookups with explicit fieldDefs lookup objects in _updateTemplates, _fieldStyle, _unitStyle and renderField
-// v3.2.85: Add cardinals flag to tickDefs; replace hardcoded string comparison with def.cardinals boolean
-// v3.2.84: Replace string-based config key lookup with explicit tickDefs lookup object
-// v3.2.83: Fix tick mark rendering: correct config key pattern from tick_major_ to major_ticks_ after variable rename
+const CARD_VERSION = '3.4.109';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -53,13 +26,13 @@ const DEFAULT_CONFIG = {
   needle_morph:             50,
   needle_curve:             0,
   marker_1_show:            false,
-  marker_1_degrees:         45,
+  marker_1_degrees:         '45',
   marker_1_length:          5,
   marker_1_width:           4,
   marker_1_position:        0,
   marker_1_color:           '#FF0000',
   marker_2_show:            false,
-  marker_2_degrees:         315,
+  marker_2_degrees:         '315',
   marker_2_length:          5,
   marker_2_width:           4,
   marker_2_position:        0,
@@ -371,15 +344,16 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-switch>
         </div>
       </div>
-      <div class="marker-styling-grid">
+      <div class="marker-template-grid">
         <div class="text-field">
-          <label>Degrees</label>
+          <label>Degrees (jinja template allowed)</label>
           <ha-textfield
-            type="number" step="1" min="0" max="359"
             .value=${String(c.marker_1_degrees)}
             @input=${e => this._valueChanged('marker_1_degrees', e)}
           ></ha-textfield>
         </div>
+      </div>
+      <div class="marker-styling-grid">
         <div class="text-field">
           <label>Length</label>
           <ha-textfield
@@ -417,15 +391,16 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-switch>
         </div>
       </div>
-      <div class="marker-styling-grid">
+      <div class="marker-template-grid">
         <div class="text-field">
-          <label>Degrees</label>
+          <label>Degrees (jinja template allowed)</label>
           <ha-textfield
-            type="number" step="1" min="0" max="359"
             .value=${String(c.marker_2_degrees)}
             @input=${e => this._valueChanged('marker_2_degrees', e)}
           ></ha-textfield>
         </div>
+      </div>
+      <div class="marker-styling-grid">
         <div class="text-field">
           <label>Length</label>
           <ha-textfield
@@ -657,7 +632,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-template-grid">
         <div class="text-field">
-          <label>Template</label>
+          <label>Header (jinja template allowed)</label>
           <ha-textfield
             .value=${c.header_text}
             @input=${e => this._valueChanged('header_text', e)}
@@ -704,7 +679,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-template-grid">
         <div class="text-field">
-          <label>Template</label>
+          <label>Footer ((jinja template allowed))</label>
           <ha-textfield
             .value=${c.footer_text}
             @input=${e => this._valueChanged('footer_text', e)}
@@ -753,7 +728,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-template-grid">
         <div class="text-field">
-          <label>Template</label>
+          <label>Text (jinja template allowed)</label>
           <ha-textfield
             .value=${c.field_1_template}
             @input=${e => this._valueChanged('field_1_template', e)}
@@ -827,7 +802,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-template-grid">
         <div class="text-field">
-          <label>Template</label>
+          <label>Text (jinja template allowed)</label>
           <ha-textfield
             .value=${c.field_2_template}
             @input=${e => this._valueChanged('field_2_template', e)}
@@ -901,7 +876,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-template-grid">
         <div class="text-field">
-          <label>Template</label>
+          <label>Text (jinja template allowed)</label>
           <ha-textfield
             .value=${c.field_3_template}
             @input=${e => this._valueChanged('field_3_template', e)}
@@ -1088,9 +1063,16 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 16px;
     }
 
+    .marker-template-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
     .marker-styling-grid {
       display: grid;
-      grid-template-columns: 4fr 4fr 4fr 4fr 7fr;
+      grid-template-columns: 2fr 2fr 2fr 3fr;
       gap: 8px;
       margin-top: 8px;
       margin-bottom: 8px;
@@ -1175,6 +1157,8 @@ class CustomCompassCard extends LitElement {
     _field3Value:  { type: String },
     _headerValue:  { type: String },
     _footerValue:  { type: String },
+    _marker1Degrees: { type: Number },
+    _marker2Degrees: { type: Number },
     _error:        { type: Boolean },
   };
 
@@ -1188,6 +1172,8 @@ class CustomCompassCard extends LitElement {
     this._field3Value    = '';
     this._headerValue    = '';
     this._footerValue    = '';
+    this._marker1Degrees = 0;
+    this._marker2Degrees = 0;
     this._error          = false;
   }
 
@@ -1274,6 +1260,11 @@ class CustomCompassCard extends LitElement {
     } else {
       this._footerValue = '';
     }
+    // Evaluate marker degree templates
+    const m1raw = await this._evaluateTemplate(String(this.config.marker_1_degrees), this._degrees);
+    this._marker1Degrees = ((parseFloat(m1raw) % 360) + 360) % 360;
+    const m2raw = await this._evaluateTemplate(String(this.config.marker_2_degrees), this._degrees);
+    this._marker2Degrees = ((parseFloat(m2raw) % 360) + 360) % 360;
   }
 
   updated(changedProperties) {
@@ -1469,8 +1460,8 @@ class CustomCompassCard extends LitElement {
 
     // Build marker triangles — inverted triangle pointing inward at a fixed bearing
     const markerDefs = [
-      { show: c.marker_1_show, degrees: parseFloat(c.marker_1_degrees), length: parseFloat(c.marker_1_length), width: parseFloat(c.marker_1_width), position: parseFloat(c.marker_1_position), color: c.marker_1_color },
-      { show: c.marker_2_show, degrees: parseFloat(c.marker_2_degrees), length: parseFloat(c.marker_2_length), width: parseFloat(c.marker_2_width), position: parseFloat(c.marker_2_position), color: c.marker_2_color },
+      { show: c.marker_1_show, degrees: this._marker1Degrees, length: parseFloat(c.marker_1_length), width: parseFloat(c.marker_1_width), position: parseFloat(c.marker_1_position), color: c.marker_1_color },
+      { show: c.marker_2_show, degrees: this._marker2Degrees, length: parseFloat(c.marker_2_length), width: parseFloat(c.marker_2_width), position: parseFloat(c.marker_2_position), color: c.marker_2_color },
     ];
 
     const markers = markerDefs.map(m => {
