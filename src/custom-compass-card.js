@@ -1,7 +1,7 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.5.119';
+const CARD_VERSION = '3.5.121';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -43,7 +43,7 @@ const DEFAULT_CONFIG = {
   marker_2_width:           4,
   marker_2_position:        0,
   marker_2_color:           '#2196F3',
-  cardinals_show:           false,
+  cardinals_show:           true,
   cardinal_north:           'N',
   cardinal_east:            'E',
   cardinal_south:           'S',
@@ -52,7 +52,7 @@ const DEFAULT_CONFIG = {
   cardinals_fontweight:     400,
   cardinals_position:       1.5,
   cardinals_fontcolor:      '#EEEEEE',
-  major_ticks_show:         true,
+  major_ticks_show:         false,
   major_ticks_length:       6,
   major_ticks_width:        2,
   major_ticks_position:     -3.5,
@@ -1024,6 +1024,10 @@ class CustomCompassCardEditor extends LitElement {
 
     ha-expansion-panel > *:first-child {
       margin-top: 16px;
+    }
+
+    ha-expansion-panel + ha-expansion-panel > *:first-child {
+      margin-top: 24px;
     }
 
     .compass-entity-grid {
