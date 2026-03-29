@@ -1,7 +1,7 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.5.116';
+const CARD_VERSION = '3.5.119';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -181,7 +181,7 @@ class CustomCompassCardEditor extends LitElement {
 
     return html`
 
-	  <h2 style="margin-top: 0;">Compass configuration</h2>
+      <ha-expansion-panel header="Compass configuration" outlined>
 
       <!-- Entity -->
       <div class="compass-entity-grid">
@@ -288,7 +288,9 @@ class CustomCompassCardEditor extends LitElement {
         </div>
       </div>
 
-	  <h2>Needle configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Needle configuration" outlined>
 
       <!-- Needle toggles -->
       <div class="needle-toggles-grid">
@@ -393,7 +395,9 @@ class CustomCompassCardEditor extends LitElement {
         </div>
       </div>
 
-	  <h2>Markers configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Markers configuration" outlined>
 
       <!-- Marker 1 -->
       <div class="marker-toggles-grid">
@@ -489,7 +493,9 @@ class CustomCompassCardEditor extends LitElement {
         ${this._colorPicker('marker_2_color', 'Color')}
       </div>
 
-	  <h2>Ticks configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Ticks configuration" outlined>
 
       <!-- Cardinal labels -->
       <div class="tick-toggles-grid">
@@ -679,7 +685,9 @@ class CustomCompassCardEditor extends LitElement {
         ${this._colorPicker('micro_ticks_color', 'Color')}
       </div>
 
-	  <h2>Header &amp; Footer configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Header &amp; Footer configuration" outlined>
 
       <!-- Header -->
       <div class="field-toggles-grid">
@@ -775,7 +783,9 @@ class CustomCompassCardEditor extends LitElement {
         ${this._colorPicker('footer_fontcolor', 'Color')}
       </div>
 
-	  <h2>Custom fields configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Custom fields configuration" outlined>
 
       <!-- Field 1 -->
       <div class="field-toggles-grid">
@@ -997,6 +1007,8 @@ class CustomCompassCardEditor extends LitElement {
         </div>
         ${this._colorPicker('field_3_unit_fontcolor', 'Color')}
       </div>
+
+      </ha-expansion-panel>
     `;
   }
 
@@ -1006,16 +1018,19 @@ class CustomCompassCardEditor extends LitElement {
       padding: 16px;
     }
 
-    h2 {
-      margin-top: 40px;
-      margin-bottom: 0px;
+    ha-expansion-panel {
+      margin-top: 8px;
+    }
+
+    ha-expansion-panel > *:first-child {
+      margin-top: 16px;
     }
 
     .compass-entity-grid {
       display: grid;
       grid-template-columns: 5fr 4fr 3fr;
       gap: 8px;
-      margin-top: 24px;
+      margin-top: 8px;
       margin-bottom: 16px;
     }
 
