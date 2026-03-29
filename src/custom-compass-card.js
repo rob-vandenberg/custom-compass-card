@@ -1,7 +1,7 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.5.114';
+const CARD_VERSION = '3.5.116';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -235,7 +235,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
 
       <!-- Background image -->
-      <div class="compass-toggles-grid">
+      <div class="background-toggles-grid">
         <div class="toggle-field">
           <label>Background image</label>
           <ha-switch
@@ -382,7 +382,7 @@ class CustomCompassCardEditor extends LitElement {
       </div>
 
       <!-- Rotate compass -->
-      <div class="compass-toggles-grid">
+      <div class="rotate-compass-toggle-grid">
         <div class="toggle-field">
           <label>Rotate compass</label>
           <ha-switch
@@ -1027,12 +1027,28 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 16px;
     }
 
-    .compass-toggles-grid {
+    .background-toggles-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 8px;
-      margin-top: 28px;
+      margin-top: 32px;
       margin-bottom: 16px;
+    }
+
+    .background-image-template-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .background-image-styling-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      align-items: end;
     }
 
     .needle-toggles-grid {
@@ -1056,6 +1072,14 @@ class CustomCompassCardEditor extends LitElement {
       grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
       gap: 8px;
       margin-top: 8px;
+      margin-bottom: 16px;
+    }
+
+    .rotate-compass-toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 28px;
       margin-bottom: 16px;
     }
 
@@ -1113,22 +1137,6 @@ class CustomCompassCardEditor extends LitElement {
       grid-template-columns: 2fr 1fr 1fr 2fr;
       gap: 8px;
       margin-top: 8px;
-      align-items: end;
-    }
-
-    .background-image-template-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .background-image-styling-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 8px;
-      margin-top: 8px;
-      margin-bottom: 8px;
       align-items: end;
     }
 
