@@ -1,7 +1,7 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.5.121';
+const CARD_VERSION = '3.6.126';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -13,7 +13,7 @@ const DEFAULT_CONFIG = {
   bezel_width:              16,
   bezel_size:               0,
   background_image_show:    false,
-  background_image_url:     '/local/community/custom-compass-card/earth.jpg',
+  background_image_url:     '/local/community/custom-compass-card/earth.png',
   background_image_scale:   180,
   background_image_x:       -16,
   background_image_y:       32,
@@ -31,6 +31,12 @@ const DEFAULT_CONFIG = {
   needle_position:          -10,
   needle_morph:             50,
   needle_curve:             0,
+  needle_image_show:        false,
+  needle_image_url:         '/local/community/custom-compass-card/moon.png',
+  needle_image_scale:       100,
+  needle_image_x:           0,
+  needle_image_y:           0,
+  needle_image_rotate:      0,
   marker_1_show:            false,
   marker_1_degrees:         '45',
   marker_1_length:          5,
@@ -265,7 +271,7 @@ class CustomCompassCardEditor extends LitElement {
         <div class="text-field">
           <label>X pos (%)</label>
           <ha-textfield
-            type="number" step="1"
+            type="number" step="0.5"
             .value=${String(c.background_image_x)}
             @input=${e => this._valueChanged('background_image_x', e)}
           ></ha-textfield>
@@ -273,7 +279,7 @@ class CustomCompassCardEditor extends LitElement {
         <div class="text-field">
           <label>Y pos (%)</label>
           <ha-textfield
-            type="number" step="1"
+            type="number" step="0.5"
             .value=${String(c.background_image_y)}
             @input=${e => this._valueChanged('background_image_y', e)}
           ></ha-textfield>
@@ -379,6 +385,60 @@ class CustomCompassCardEditor extends LitElement {
             type="number" step="1"
             .value=${String(c.needle_curve)}
             @input=${e => this._valueChanged('needle_curve', e)}
+          ></ha-textfield>
+        </div>
+      </div>
+
+      <!-- Needle image -->
+      <div class="needle-image-toggles-grid">
+        <div class="toggle-field">
+          <label>Needle image</label>
+          <ha-switch
+            .checked=${c.needle_image_show}
+            @change=${e => this._valueChanged('needle_image_show', e)}
+          ></ha-switch>
+        </div>
+      </div>
+      <div class="needle-image-template-grid">
+        <div class="text-field">
+          <label>URL (jinja template allowed)</label>
+          <ha-textfield
+            .value=${String(c.needle_image_url)}
+            @input=${e => this._valueChanged('needle_image_url', e)}
+          ></ha-textfield>
+        </div>
+      </div>
+      <div class="needle-image-styling-grid">
+        <div class="text-field">
+          <label>Scale (%)</label>
+          <ha-textfield
+            type="number" step="1" min="1"
+            .value=${String(c.needle_image_scale)}
+            @input=${e => this._valueChanged('needle_image_scale', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>X pos</label>
+          <ha-textfield
+            type="number" step="0.5"
+            .value=${String(c.needle_image_x)}
+            @input=${e => this._valueChanged('needle_image_x', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Y pos</label>
+          <ha-textfield
+            type="number" step="0.5"
+            .value=${String(c.needle_image_y)}
+            @input=${e => this._valueChanged('needle_image_y', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Rotate</label>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(c.needle_image_rotate)}
+            @input=${e => this._valueChanged('needle_image_rotate', e)}
           ></ha-textfield>
         </div>
       </div>
@@ -1102,6 +1162,30 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 16px;
     }
 
+    .needle-image-toggles-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 28px;
+      margin-bottom: 16px;
+    }
+
+    .needle-image-template-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .needle-image-styling-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      align-items: end;
+    }
+
     .tick-toggles-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -1271,6 +1355,7 @@ class CustomCompassCard extends LitElement {
     _marker1Degrees:        { type: Number },
     _marker2Degrees:        { type: Number },
     _backgroundImageUrl:    { type: String },
+    _needleImageUrl:        { type: String },
     _error:                 { type: Boolean },
   };
 
@@ -1287,6 +1372,7 @@ class CustomCompassCard extends LitElement {
     this._marker1Degrees        = 0;
     this._marker2Degrees        = 0;
     this._backgroundImageUrl    = '';
+    this._needleImageUrl        = '';
     this._error                 = false;
   }
 
@@ -1383,6 +1469,12 @@ class CustomCompassCard extends LitElement {
       this._backgroundImageUrl = await this._evaluateTemplate(String(this.config.background_image_url), this._degrees);
     } else {
       this._backgroundImageUrl = '';
+    }
+    // Evaluate needle image URL template
+    if (this.config.needle_image_show) {
+      this._needleImageUrl = await this._evaluateTemplate(String(this.config.needle_image_url), this._degrees);
+    } else {
+      this._needleImageUrl = '';
     }
   }
 
@@ -1697,7 +1789,7 @@ class CustomCompassCard extends LitElement {
             ${c.background_image_show && this._backgroundImageUrl ? html`
               <img class="compass-bg-image"
                 src="${this._backgroundImageUrl}"
-                style="transform: translate(${c.background_image_x}%, ${c.background_image_y}%) rotate(${c.background_image_rotate}deg) scale(${c.background_image_scale / 100});"
+                style="transform: translate(-50%, -50%) translate(${c.background_image_x}%, ${c.background_image_y}%) rotate(${c.background_image_rotate}deg) scale(${c.background_image_scale / 100});"
               />
             ` : ''}
             ${renderField(fieldDefs[0], this._field1Value)}
@@ -1717,8 +1809,24 @@ class CustomCompassCard extends LitElement {
                     <stop offset="${g2pos}%" stop-color="${g2}" />
                     <stop offset="100%"      stop-color="${g2}" />
                   </linearGradient>
+                  ${c.needle_image_show && this._needleImageUrl ? svg`
+                    <clipPath id="needleClip">
+                      <path d="${pathData.path}" />
+                    </clipPath>
+                  ` : ''}
                 </defs>
-                <path d="${pathData.path}" fill="url(#needleGradient)" />
+                ${c.needle_image_show && this._needleImageUrl ? svg`
+                  <image
+                    href="${this._needleImageUrl}"
+                    x="${minX}" y="${minY}"
+                    width="${maxX - minX}" height="${maxY - minY}"
+                    preserveAspectRatio="xMidYMid slice"
+                    clip-path="url(#needleClip)"
+                    transform="translate(${(maxX + minX) / 2}, ${(maxY + minY) / 2}) rotate(${c.needle_image_rotate}) scale(${c.needle_image_scale / 100}) translate(${c.needle_image_x}, ${c.needle_image_y}) translate(${-(maxX + minX) / 2}, ${-(maxY + minY) / 2})"
+                  />
+                ` : svg`
+                  <path d="${pathData.path}" fill="url(#needleGradient)" />
+                `}
               </svg>
             ` : ''}
           </div>
@@ -1781,11 +1889,11 @@ class CustomCompassCard extends LitElement {
     }
     .compass-bg-image {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
+      top: 50%;
+      left: 50%;
       height: 100%;
-      object-fit: cover;
+      width: auto;
+      max-width: none;
       transform-origin: center center;
       pointer-events: none;
       z-index: 0;

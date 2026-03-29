@@ -29,4 +29,4 @@ jobs:
           name: "v${{ github.event.inputs.version }}"
           body: "Published by Rob Vandenberg"
           makeLatest: true
-          artifacts: "custom-compass-card.js,www/earth.jpg"
+          artifacts: "custom-compass-card.js,www/earth.png,www/moon.png,www/sun.png,www/iss.png,www/marble.png"
