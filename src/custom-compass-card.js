@@ -1,7 +1,45 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.5.116';
+const CARD_VERSION = '3.5.119';
+// ─── Card Version History ─────────────────────────────────────────────────────
+// v3.5.119: All expansion panels collapsed by default
+// v3.5.118: Increase first-child top margin inside expansion panels to 16px
+// v3.5.117: Wrap all editor sections in ha-expansion-panel; Compass expanded by default, others collapsed
+// v3.5.116: Move rotate-compass-toggle-grid CSS to after needle-dimensions-grid to match HTML order
+// v3.5.115: Give background-image toggle and rotate-compass toggle their own CSS classes; reorder CSS
+// v3.5.114: Update defaults; background_image_rotate is now numeric; Rotate compass toggle moved below needle styling with hint text
+// v3.5.113: Fix default background_image_url to correct HACS install path /local/community/
+// v3.5.112: Set default background_image_url to earth.jpg bundled in www/
+// v3.5.111: Add background image support with template URL and rotate; show/url/scale/x/y/rotate config keys
+// v3.4.110: Clarify template-capable field labels in UI editor
+// v3.4.109: marker_degrees becomes a template field supporting Jinja2; new marker-template-grid CSS class; _marker1Degrees/_marker2Degrees reactive properties
+// v3.4.108: Rename tickmark→tick throughout; add marker_1 and marker_2 (fixed bearing triangle markers on tick layer)
+// v3.4.107: Rename tickmark→tick throughout; add marker_1 and marker_2 (fixed bearing triangle markers on tick layer)
+// v3.3.106: Rename needle_animation_duration to rotation_animation_time
+// v3.3.105: Smooth needle animation via CSS transition; shortest-arc rotation to avoid wrap-around sweep; needle_animation_duration default config key
+// v3.3.104: Consistent toggle-field pattern across all editor sections; field-styling-grid for template-type fields
+// v3.3.103: Move "Rotate compass" toggle to compass configuration block above Needle section
+// v3.3.102: Add compass_rotate mode: dial rotates, needle stays fixed pointing north; replace ha-formfield in needle toggles with label+ha-switch pattern
+// v3.2.101: Header/footer use calc(±10px + position) for translateY; padding reduced to 10px
+// v3.2.100: Adjust header/footer natural position via padding; set default fontsize to 2.0
+// v3.2.99: Add template support to header/footer; reorder DEFAULT_CONFIG; rename dirs to directions
+// v3.2.98: Add optional header and footer text above/below compass circle
+// v3.2.97: Fix getCompassDirection: build all 16 directions from the 4 configured cardinals
+// v3.2.96: Fix Bezel labels in editor; fix getCompassDirection to use configured cardinals
+// v3.2.95: Update defaults: needle shape/color, tick marks visible, field_2 hidden
+// v3.2.94: Add Template label to field template inputs; consolidate unit fields onto one row
+// v3.2.93: Add fontweight and position to custom fields; remove hardcoded field top positions
+// v3.2.92: Update default values for tick marks and cardinals
+// v3.2.91: Cardinals get own fontsize/fontweight/position/fontcolor; rename cardinal_labels_show to cardinals_show
+// v3.2.90: Add cardinal_color; rename major_ticks_cardinals to cardinal_labels_show; use cardinal_color in rendering
+// v3.2.89: Fix cardinal labels filtered out by show flag: return show:true from cardinal branch
+// v3.2.88: Fix cardinal labels not rendering: remove dependency on major_ticks_show flag
+// v3.2.87: Add configurable cardinal labels (N/E/S/W); mutual exclusion between Cardinal labels and Primary ticks toggles in UI editor
+// v3.2.86: Replace all string-based config key lookups with explicit fieldDefs lookup objects in _updateTemplates, _fieldStyle, _unitStyle and renderField
+// v3.2.85: Add cardinals flag to tickDefs; replace hardcoded string comparison with def.cardinals boolean
+// v3.2.84: Replace string-based config key lookup with explicit tickDefs lookup object
+// v3.2.83: Fix tick mark rendering: correct config key pattern from tick_major_ to major_ticks_ after variable rename
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -181,7 +219,7 @@ class CustomCompassCardEditor extends LitElement {
 
     return html`
 
-	  <h2 style="margin-top: 0;">Compass configuration</h2>
+      <ha-expansion-panel header="Compass configuration" outlined>
 
       <!-- Entity -->
       <div class="compass-entity-grid">
@@ -288,7 +326,9 @@ class CustomCompassCardEditor extends LitElement {
         </div>
       </div>
 
-	  <h2>Needle configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Needle configuration" outlined>
 
       <!-- Needle toggles -->
       <div class="needle-toggles-grid">
@@ -393,7 +433,9 @@ class CustomCompassCardEditor extends LitElement {
         </div>
       </div>
 
-	  <h2>Markers configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Markers configuration" outlined>
 
       <!-- Marker 1 -->
       <div class="marker-toggles-grid">
@@ -489,7 +531,9 @@ class CustomCompassCardEditor extends LitElement {
         ${this._colorPicker('marker_2_color', 'Color')}
       </div>
 
-	  <h2>Ticks configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Ticks configuration" outlined>
 
       <!-- Cardinal labels -->
       <div class="tick-toggles-grid">
@@ -679,7 +723,9 @@ class CustomCompassCardEditor extends LitElement {
         ${this._colorPicker('micro_ticks_color', 'Color')}
       </div>
 
-	  <h2>Header &amp; Footer configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Header &amp; Footer configuration" outlined>
 
       <!-- Header -->
       <div class="field-toggles-grid">
@@ -775,7 +821,9 @@ class CustomCompassCardEditor extends LitElement {
         ${this._colorPicker('footer_fontcolor', 'Color')}
       </div>
 
-	  <h2>Custom fields configuration</h2>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Custom fields configuration" outlined>
 
       <!-- Field 1 -->
       <div class="field-toggles-grid">
@@ -997,6 +1045,8 @@ class CustomCompassCardEditor extends LitElement {
         </div>
         ${this._colorPicker('field_3_unit_fontcolor', 'Color')}
       </div>
+
+      </ha-expansion-panel>
     `;
   }
 
@@ -1006,16 +1056,19 @@ class CustomCompassCardEditor extends LitElement {
       padding: 16px;
     }
 
-    h2 {
-      margin-top: 40px;
-      margin-bottom: 0px;
+    ha-expansion-panel {
+      margin-top: 8px;
+    }
+
+    ha-expansion-panel > *:first-child {
+      margin-top: 16px;
     }
 
     .compass-entity-grid {
       display: grid;
       grid-template-columns: 5fr 4fr 3fr;
       gap: 8px;
-      margin-top: 24px;
+      margin-top: 8px;
       margin-bottom: 16px;
     }
 
