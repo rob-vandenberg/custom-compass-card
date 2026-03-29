@@ -19,12 +19,12 @@ Custom Compass Card is very customizable. The same card, with different settings
 | Wind Speed | Compass |
 | :----: | :----: |
 | ![Wind Speed](screenshots/screenshot1.png) | ![Compass Direction](screenshots/screenshot2.png) |
-| Sun | Rotate Compass |
-| ![Sun](screenshots/screenshot3.png) | ![Rotate Compass](screenshots/screenshot6.png) |
+| Earth orbits the Sun | Rotate Compass |
+| ![Sun](screenshots/solar2.png) | ![Rotate Compass](screenshots/screenshot6.png) |
 
 | UI Editor |
 | :-------: |
-| ![Editor](screenshots/screenshot5.png) |
+| ![Editor](screenshots/editor1.png) |
 
 Everything is configurable through the built-in visual editor — no YAML required.
 
