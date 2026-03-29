@@ -1,7 +1,38 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.4.110';
+const CARD_VERSION = '3.5.112';
+// ─── Card Version History ─────────────────────────────────────────────────────
+// v3.5.112: Set default background_image_url to earth.jpg bundled in www/
+// v3.5.111: Add background image support with template URL and rotate; show/url/scale/x/y/rotate config keys
+// v3.4.110: Clarify template-capable field labels in UI editor
+// v3.4.109: marker_degrees becomes a template field supporting Jinja2; new marker-template-grid CSS class; _marker1Degrees/_marker2Degrees reactive properties
+// v3.4.108: Rename tickmark→tick throughout; add marker_1 and marker_2 (fixed bearing triangle markers on tick layer)
+// v3.4.107: Rename tickmark→tick throughout; add marker_1 and marker_2 (fixed bearing triangle markers on tick layer)
+// v3.3.106: Rename needle_animation_duration to rotation_animation_time
+// v3.3.105: Smooth needle animation via CSS transition; shortest-arc rotation to avoid wrap-around sweep; needle_animation_duration default config key
+// v3.3.104: Consistent toggle-field pattern across all editor sections; field-styling-grid for template-type fields
+// v3.3.103: Move "Rotate compass" toggle to compass configuration block above Needle section
+// v3.3.102: Add compass_rotate mode: dial rotates, needle stays fixed pointing north; replace ha-formfield in needle toggles with label+ha-switch pattern
+// v3.2.101: Header/footer use calc(±10px + position) for translateY; padding reduced to 10px
+// v3.2.100: Adjust header/footer natural position via padding; set default fontsize to 2.0
+// v3.2.99: Add template support to header/footer; reorder DEFAULT_CONFIG; rename dirs to directions
+// v3.2.98: Add optional header and footer text above/below compass circle
+// v3.2.97: Fix getCompassDirection: build all 16 directions from the 4 configured cardinals
+// v3.2.96: Fix Bezel labels in editor; fix getCompassDirection to use configured cardinals
+// v3.2.95: Update defaults: needle shape/color, tick marks visible, field_2 hidden
+// v3.2.94: Add Template label to field template inputs; consolidate unit fields onto one row
+// v3.2.93: Add fontweight and position to custom fields; remove hardcoded field top positions
+// v3.2.92: Update default values for tick marks and cardinals
+// v3.2.91: Cardinals get own fontsize/fontweight/position/fontcolor; rename cardinal_labels_show to cardinals_show
+// v3.2.90: Add cardinal_color; rename major_ticks_cardinals to cardinal_labels_show; use cardinal_color in rendering
+// v3.2.89: Fix cardinal labels filtered out by show flag: return show:true from cardinal branch
+// v3.2.88: Fix cardinal labels not rendering: remove dependency on major_ticks_show flag
+// v3.2.87: Add configurable cardinal labels (N/E/S/W); mutual exclusion between Cardinal labels and Primary ticks toggles in UI editor
+// v3.2.86: Replace all string-based config key lookups with explicit fieldDefs lookup objects in _updateTemplates, _fieldStyle, _unitStyle and renderField
+// v3.2.85: Add cardinals flag to tickDefs; replace hardcoded string comparison with def.cardinals boolean
+// v3.2.84: Replace string-based config key lookup with explicit tickDefs lookup object
+// v3.2.83: Fix tick mark rendering: correct config key pattern from tick_major_ to major_ticks_ after variable rename
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -12,6 +43,12 @@ const DEFAULT_CONFIG = {
   bezel_color:              '#383838',
   bezel_width:              16,
   bezel_size:               0,
+  background_image_show:    false,
+  background_image_url:     '/local/custom-compass-card/earth.jpg',
+  background_image_scale:   100,
+  background_image_x:       0,
+  background_image_y:       0,
+  background_image_rotate:  '0',
   needle_show:              true,
   needle_invert:            false,
   needle_rotate:            false,
@@ -224,6 +261,59 @@ class CustomCompassCardEditor extends LitElement {
             type="number" step="1"
             .value=${String(c.bezel_size)}
             @input=${e => this._valueChanged('bezel_size', e)}
+          ></ha-textfield>
+        </div>
+      </div>
+
+      <!-- Background image -->
+      <div class="compass-toggles-grid">
+        <div class="toggle-field">
+          <label>Background image</label>
+          <ha-switch
+            .checked=${c.background_image_show}
+            @change=${e => this._valueChanged('background_image_show', e)}
+          ></ha-switch>
+        </div>
+      </div>
+      <div class="background-image-template-grid">
+        <div class="text-field">
+          <label>URL (jinja template allowed)</label>
+          <ha-textfield
+            .value=${String(c.background_image_url)}
+            @input=${e => this._valueChanged('background_image_url', e)}
+          ></ha-textfield>
+        </div>
+      </div>
+      <div class="background-image-styling-grid">
+        <div class="text-field">
+          <label>Scale (%)</label>
+          <ha-textfield
+            type="number" step="1" min="1"
+            .value=${String(c.background_image_scale)}
+            @input=${e => this._valueChanged('background_image_scale', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>X pos (%)</label>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(c.background_image_x)}
+            @input=${e => this._valueChanged('background_image_x', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Y pos (%)</label>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(c.background_image_y)}
+            @input=${e => this._valueChanged('background_image_y', e)}
+          ></ha-textfield>
+        </div>
+        <div class="text-field">
+          <label>Rotate (jinja allowed)</label>
+          <ha-textfield
+            .value=${String(c.background_image_rotate)}
+            @input=${e => this._valueChanged('background_image_rotate', e)}
           ></ha-textfield>
         </div>
       </div>
@@ -1055,6 +1145,22 @@ class CustomCompassCardEditor extends LitElement {
       align-items: end;
     }
 
+    .background-image-template-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .background-image-styling-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      align-items: end;
+    }
+
     .marker-toggles-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -1157,9 +1263,11 @@ class CustomCompassCard extends LitElement {
     _field3Value:  { type: String },
     _headerValue:  { type: String },
     _footerValue:  { type: String },
-    _marker1Degrees: { type: Number },
-    _marker2Degrees: { type: Number },
-    _error:        { type: Boolean },
+    _marker1Degrees:        { type: Number },
+    _marker2Degrees:        { type: Number },
+    _backgroundImageUrl:    { type: String },
+    _backgroundImageRotate: { type: Number },
+    _error:                 { type: Boolean },
   };
 
   constructor() {
@@ -1172,9 +1280,11 @@ class CustomCompassCard extends LitElement {
     this._field3Value    = '';
     this._headerValue    = '';
     this._footerValue    = '';
-    this._marker1Degrees = 0;
-    this._marker2Degrees = 0;
-    this._error          = false;
+    this._marker1Degrees        = 0;
+    this._marker2Degrees        = 0;
+    this._backgroundImageUrl    = '';
+    this._backgroundImageRotate = 0;
+    this._error                 = false;
   }
 
   setConfig(config) {
@@ -1265,6 +1375,15 @@ class CustomCompassCard extends LitElement {
     this._marker1Degrees = ((parseFloat(m1raw) % 360) + 360) % 360;
     const m2raw = await this._evaluateTemplate(String(this.config.marker_2_degrees), this._degrees);
     this._marker2Degrees = ((parseFloat(m2raw) % 360) + 360) % 360;
+    // Evaluate background image templates
+    if (this.config.background_image_show) {
+      this._backgroundImageUrl    = await this._evaluateTemplate(String(this.config.background_image_url), this._degrees);
+      const bgRotRaw              = await this._evaluateTemplate(String(this.config.background_image_rotate), this._degrees);
+      this._backgroundImageRotate = parseFloat(bgRotRaw) || 0;
+    } else {
+      this._backgroundImageUrl    = '';
+      this._backgroundImageRotate = 0;
+    }
   }
 
   updated(changedProperties) {
@@ -1575,6 +1694,12 @@ class CustomCompassCard extends LitElement {
         ` : ''}
         <div class="compass-container">
           <div class="compass-circle">
+            ${c.background_image_show && this._backgroundImageUrl ? html`
+              <img class="compass-bg-image"
+                src="${this._backgroundImageUrl}"
+                style="transform: translate(${c.background_image_x}%, ${c.background_image_y}%) rotate(${this._backgroundImageRotate}deg) scale(${c.background_image_scale / 100});"
+              />
+            ` : ''}
             ${renderField(fieldDefs[0], this._field1Value)}
             ${renderField(fieldDefs[1], this._field2Value)}
             ${renderField(fieldDefs[2], this._field3Value)}
@@ -1652,6 +1777,18 @@ class CustomCompassCard extends LitElement {
       border: var(--cc-circle-border-width, 15px) solid var(--cc-circle-color, #333333);
       box-sizing: border-box;
       font-size: var(--cc-font-size, 1em);
+      overflow: hidden;
+    }
+    .compass-bg-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform-origin: center center;
+      pointer-events: none;
+      z-index: 0;
     }
     .compass-ticks-wrapper {
       position: absolute;
