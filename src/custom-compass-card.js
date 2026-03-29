@@ -1,7 +1,7 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.6.127';
+const CARD_VERSION = '3.6.128';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -348,7 +348,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
         <div class="text-field">
-          <label>X pos (%)</label>
+          <label>X pos</label>
           <ha-textfield
             type="number" step="0.5"
             .value=${String(c.background_image_x)}
@@ -356,7 +356,7 @@ class CustomCompassCardEditor extends LitElement {
           ></ha-textfield>
         </div>
         <div class="text-field">
-          <label>Y pos (%)</label>
+          <label>Y pos</label>
           <ha-textfield
             type="number" step="0.5"
             .value=${String(c.background_image_y)}
