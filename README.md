@@ -16,15 +16,27 @@ What makes it different from other compass cards is the level of visual control.
 
 Custom Compass Card is very customizable. The same card, with different settings, can look like a wind speedometer, a compass or a sun tracker:
 
-| Wind Speed | Compass |
-| :----: | :----: |
-| ![Wind Speed](screenshots/screenshot1.png) | ![Compass Direction](screenshots/screenshot2.png) |
-| Earth orbits the Sun | Rotate Compass |
-| ![Sun](screenshots/solar2.png) | ![Rotate Compass](screenshots/screenshot6.png) |
+| Compass | Needle Locked, Rotate Dial |
+| :-------: | :-------: |
+| ![Compass](screenshots/compass0.png) | ![Rotate Dial](screenshots/compass2.png) |
+| Scale | Wind Speed |
+| ![Scale](screenshots/compass3.png) | ![Custom Markers](screenshots/compass4.png) |
+
+| Custom Markers |
+| :-------: |
+| ![Space](screenshots/compass5.png) |
+
+| Space |
+| :-------: |
+| ![Space](screenshots/dashboard5.png) |
+
+| Dashboard |
+| :-------: |
+| ![Dashboard](screenshots/dashboard4.png) |
 
 | UI Editor |
 | :-------: |
-| ![Editor](screenshots/editor1.png) |
+| ![Editor](screenshots/editor2.png) |
 
 Everything is configurable through the built-in visual editor — no YAML required.
 
