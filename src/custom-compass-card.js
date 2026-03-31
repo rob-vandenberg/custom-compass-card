@@ -1,7 +1,7 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.6.129';
+const CARD_VERSION = '3.6.130';
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -12,11 +12,11 @@ const DEFAULT_CONFIG = {
   bezel_color:              '#383838',
   bezel_width:              16,
   bezel_size:               0,
-  background_image_show:    false,
-  background_image_url:     '/local/community/custom-compass-card/world.png',
-  background_image_scale:   154,
-  background_image_x:       -8,
-  background_image_y:       16,
+  background_image_show:    true,
+  background_image_url:     '/local/community/custom-compass-card/black.png',
+  background_image_scale:   100,
+  background_image_x:       0,
+  background_image_y:       0,
   background_image_rotate:  0,
   needle_show:              true,
   needle_invert:            false,
