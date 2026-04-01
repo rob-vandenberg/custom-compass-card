@@ -1,13 +1,24 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.6.130';
+const CARD_VERSION = '3.7.143';
+// ─── Card Version History ─────────────────────────────────────────────────────
+// v3.7.143: Replace ha-textfield with own cc-textfield component — future-proof against HA 2026.5 removal; fixes width issue in 2026.4
+// v3.7.142: Fix TypeError in field callback — convert HA result to String before calling replace()
+// v3.7.141: Remove unnecessary _fieldRawValues; simplify ${compass_direction} handling
+// v3.7.140: Fix ${compass_direction} in mixed templates: send template to HA untouched, replace token in callback and on bearing change
+// v3.7.139: Rename compass_template to needle_template; move to needle block in DEFAULT_CONFIG
+// v3.7.138: DRY fixes: _fieldDefs getter replaces duplicate arrays; markers handled in a loop
+// v3.7.137: Move {{ check into sub() helper — single place, applies to all templates automatically
+// v3.7.136: Apply {{ check before every sub() call — never call HA with a plain string; applies to all 10 templates
+// v3.7.135: Correct ${compass_direction}: replace first then decide subscription based on whether Jinja2 remains
+// v3.7.134: Fix ${compass_direction} handling: resolved client-side via getCompassDirection(), no HA subscription
+// v3.7.133: Replace REST template polling with WebSocket subscribeMessage; HA tracks entity dependencies and pushes updates automatically
+// v3.7.132: Move bearing template field from Compass panel to Needle panel; rename CSS class to needle-template-grid
+// v3.7.131: Replace compass entity/attribute/adjustment with needle_template (Jinja2); remove willUpdate entity watch
 
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
-  compass_entity:           'sun.sun',
-  compass_attribute:        'azimuth',
-  compass_adjustment:       0,
   background_color:         '#101010',
   bezel_color:              '#383838',
   bezel_width:              16,
@@ -19,6 +30,7 @@ const DEFAULT_CONFIG = {
   background_image_y:       0,
   background_image_rotate:  0,
   needle_show:              true,
+  needle_template:          "{{ state_attr('sun.sun', 'azimuth') | float(0) }}",
   needle_invert:            false,
   needle_rotate:            false,
   needle_color_1:           '#FF0000',
@@ -118,6 +130,64 @@ const DEFAULT_CONFIG = {
   rotation_animation_time:  0.5,
 };
 
+// ─── cc-textfield ─────────────────────────────────────────────────────────────
+// Own text field component — replaces cc-textfield which was removed in HA 2026.5.
+// Exposes .value and .type so _valueChanged() works identically to before.
+class CcTextfield extends LitElement {
+  static properties = {
+    value: { type: String },
+    type:  { type: String },
+    step:  { type: String },
+    min:   { type: String },
+    max:   { type: String },
+  };
+
+  static styles = css`
+    :host {
+      display: block;
+      width: 100%;
+    }
+    input {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      height: 56px;
+      padding: 16px 12px 0 12px;
+      background: var(--input-fill-color, rgba(0,0,0,0.06));
+      border: none;
+      border-bottom: 1px solid var(--secondary-text-color, #888);
+      border-radius: 4px 4px 0 0;
+      color: var(--primary-text-color);
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: border-bottom-color 0.2s;
+    }
+    input:focus {
+      border-bottom: 2px solid var(--primary-color);
+    }
+  `;
+
+  render() {
+    return html`
+      <input
+        .value=${this.value ?? ''}
+        type=${this.type || 'text'}
+        step=${this.step || ''}
+        min=${this.min || ''}
+        max=${this.max || ''}
+        @input=${this._onInput}
+      />
+    `;
+  }
+
+  _onInput(e) {
+    this.value = e.target.value;
+    this.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  }
+}
+customElements.define('cc-textfield', CcTextfield);
+
 // ─── Visual Editor ────────────────────────────────────────────────────────────
 class CustomCompassCardEditor extends LitElement {
   static properties = {
@@ -127,15 +197,6 @@ class CustomCompassCardEditor extends LitElement {
 
   setConfig(config) {
     this._config = { ...DEFAULT_CONFIG, ...config };
-    this.loadCardHelpers();
-  }
-
-  async loadCardHelpers() {
-    if (!window.customElements.get("ha-entity-picker")) {
-      const helpers = await window.loadCardHelpers();
-      const card = await helpers.createCardElement({ type: "entities", entities: [] });
-      await card.constructor.getConfigElement();
-    }
   }
 
   _valueChanged(key, ev) {
@@ -171,11 +232,11 @@ class CustomCompassCardEditor extends LitElement {
             .value=${value.length >= 7 ? value.substring(0, 7) : value}
             @input=${e => this._valueChanged(key, e)}
           />
-          <ha-textfield
+          <cc-textfield
             .value=${value}
             placeholder="#RRGGBB or #RRGGBBAA"
             @input=${e => this._valueChanged(key, e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
     `;
@@ -189,54 +250,25 @@ class CustomCompassCardEditor extends LitElement {
 
       <ha-expansion-panel header="Compass configuration" outlined>
 
-      <!-- Entity -->
-      <div class="compass-entity-grid">
-        <div class="text-field">
-          <label>Compass entity</label>
-          <ha-entity-picker
-            .hass=${this.hass}
-            .value=${c.compass_entity}
-            .includeDomains=${['sensor']}
-            allow-custom-entity
-            @value-changed=${e => this._valueChanged('compass_entity', e)}
-          ></ha-entity-picker>
-        </div>
-        <div class="text-field">
-          <label>Attribute</label>
-          <ha-textfield
-            .value=${c.compass_attribute}
-            @input=${e => this._valueChanged('compass_attribute', e)}
-          ></ha-textfield>
-        </div>
-        <div class="text-field">
-          <label>Adjustment</label>
-          <ha-textfield
-            type="number" step="1"
-            .value=${String(c.compass_adjustment)}
-            @input=${e => this._valueChanged('compass_adjustment', e)}
-          ></ha-textfield>
-        </div>
-      </div>
-
       <!-- Compass styling -->
       <div class="compass-styling-grid">
         ${this._colorPicker('background_color', 'Background')}
         ${this._colorPicker('bezel_color', 'Bezel color')}
         <div class="text-field">
           <label>Bezel width</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1" min="0"
             .value=${String(c.bezel_width)}
             @input=${e => this._valueChanged('bezel_width', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Bezel size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.bezel_size)}
             @input=${e => this._valueChanged('bezel_size', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
 
@@ -253,44 +285,44 @@ class CustomCompassCardEditor extends LitElement {
       <div class="background-image-template-grid">
         <div class="text-field">
           <label>URL (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${String(c.background_image_url)}
             @input=${e => this._valueChanged('background_image_url', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="background-image-styling-grid">
         <div class="text-field">
           <label>Scale (%)</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1" min="1"
             .value=${String(c.background_image_scale)}
             @input=${e => this._valueChanged('background_image_scale', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>X pos</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.background_image_x)}
             @input=${e => this._valueChanged('background_image_x', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Y pos</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.background_image_y)}
             @input=${e => this._valueChanged('background_image_y', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Rotate</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.background_image_rotate)}
             @input=${e => this._valueChanged('background_image_rotate', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
 
@@ -323,25 +355,36 @@ class CustomCompassCardEditor extends LitElement {
         </div>  
       </div>
 
+      <!-- Needle bearing template -->
+      <div class="needle-template-grid">
+        <div class="text-field">
+          <label>Bearing (jinja template)</label>
+          <cc-textfield
+            .value=${c.needle_template}
+            @input=${e => this._valueChanged('needle_template', e)}
+          ></cc-textfield>
+        </div>
+      </div>
+
       <!-- Needle colors -->
       <div class="needle-color-grid">
         ${this._colorPicker('needle_color_1', 'Needle color 1')}
         <div class="text-field">
           <label>Pos (%)</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1" min="0" max="100"
             .value=${String(c.needle_color_1_pos)}
             @input=${e => this._valueChanged('needle_color_1_pos', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('needle_color_2', 'Needle color 2')}
         <div class="text-field">
           <label>Pos (%)</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1" min="0" max="100"
             .value=${String(c.needle_color_2_pos)}
             @input=${e => this._valueChanged('needle_color_2_pos', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
 
@@ -349,43 +392,43 @@ class CustomCompassCardEditor extends LitElement {
       <div class="needle-dimensions-grid">
         <div class="text-field">
           <label>Height</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1" min="4"
             .value=${String(c.needle_height)}
             @input=${e => this._valueChanged('needle_height', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1" min="1"
             .value=${String(c.needle_width)}
             @input=${e => this._valueChanged('needle_width', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.needle_position)}
             @input=${e => this._valueChanged('needle_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Morph</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.needle_morph)}
             @input=${e => this._valueChanged('needle_morph', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Curve</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.needle_curve)}
             @input=${e => this._valueChanged('needle_curve', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
 
@@ -402,44 +445,44 @@ class CustomCompassCardEditor extends LitElement {
       <div class="needle-image-template-grid">
         <div class="text-field">
           <label>URL (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${String(c.needle_image_url)}
             @input=${e => this._valueChanged('needle_image_url', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="needle-image-styling-grid">
         <div class="text-field">
           <label>Scale (%)</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1" min="1"
             .value=${String(c.needle_image_scale)}
             @input=${e => this._valueChanged('needle_image_scale', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>X pos</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.needle_image_x)}
             @input=${e => this._valueChanged('needle_image_x', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Y pos</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.needle_image_y)}
             @input=${e => this._valueChanged('needle_image_y', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Rotate</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.needle_image_rotate)}
             @input=${e => this._valueChanged('needle_image_rotate', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
 
@@ -472,36 +515,36 @@ class CustomCompassCardEditor extends LitElement {
       <div class="marker-template-grid">
         <div class="text-field">
           <label>Degrees (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${String(c.marker_1_degrees)}
             @input=${e => this._valueChanged('marker_1_degrees', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="marker-styling-grid">
         <div class="text-field">
           <label>Length</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.marker_1_length)}
             @input=${e => this._valueChanged('marker_1_length', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.marker_1_width)}
             @input=${e => this._valueChanged('marker_1_width', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.marker_1_position)}
             @input=${e => this._valueChanged('marker_1_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('marker_1_color', 'Color')}
       </div>
@@ -519,36 +562,36 @@ class CustomCompassCardEditor extends LitElement {
       <div class="marker-template-grid">
         <div class="text-field">
           <label>Degrees (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${String(c.marker_2_degrees)}
             @input=${e => this._valueChanged('marker_2_degrees', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="marker-styling-grid">
         <div class="text-field">
           <label>Length</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.marker_2_length)}
             @input=${e => this._valueChanged('marker_2_length', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.marker_2_width)}
             @input=${e => this._valueChanged('marker_2_width', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.marker_2_position)}
             @input=${e => this._valueChanged('marker_2_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('marker_2_color', 'Color')}
       </div>
@@ -573,57 +616,57 @@ class CustomCompassCardEditor extends LitElement {
       <div class="cardinal-labels-grid">
         <div class="text-field">
           <label>North</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.cardinal_north}
             @input=${e => this._valueChanged('cardinal_north', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>East</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.cardinal_east}
             @input=${e => this._valueChanged('cardinal_east', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>South</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.cardinal_south}
             @input=${e => this._valueChanged('cardinal_south', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>West</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.cardinal_west}
             @input=${e => this._valueChanged('cardinal_west', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="tick-styling-grid">
         <div class="text-field">
           <label>Font size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5" min="0"
             .value=${String(c.cardinals_fontsize)}
             @input=${e => this._valueChanged('cardinals_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Font weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.cardinals_fontweight)}
             @input=${e => this._valueChanged('cardinals_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.cardinals_position)}
             @input=${e => this._valueChanged('cardinals_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('cardinals_fontcolor', 'Color')}
       </div>
@@ -644,27 +687,27 @@ class CustomCompassCardEditor extends LitElement {
       <div class="tick-styling-grid">
         <div class="text-field">
           <label>Length</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.major_ticks_length)}
             @input=${e => this._valueChanged('major_ticks_length', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.major_ticks_width)}
             @input=${e => this._valueChanged('major_ticks_width', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.major_ticks_position)}
             @input=${e => this._valueChanged('major_ticks_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('major_ticks_color', 'Color')}
       </div>
@@ -682,27 +725,27 @@ class CustomCompassCardEditor extends LitElement {
       <div class="tick-styling-grid">
         <div class="text-field">
           <label>Length</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.minor_ticks_length)}
             @input=${e => this._valueChanged('minor_ticks_length', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.minor_ticks_width)}
             @input=${e => this._valueChanged('minor_ticks_width', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.minor_ticks_position)}
             @input=${e => this._valueChanged('minor_ticks_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('minor_ticks_color', 'Color')}
       </div>
@@ -720,27 +763,27 @@ class CustomCompassCardEditor extends LitElement {
       <div class="tick-styling-grid">
         <div class="text-field">
           <label>Length</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.micro_ticks_length)}
             @input=${e => this._valueChanged('micro_ticks_length', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Width</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1" min="0"
             .value=${String(c.micro_ticks_width)}
             @input=${e => this._valueChanged('micro_ticks_width', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.5"
             .value=${String(c.micro_ticks_position)}
             @input=${e => this._valueChanged('micro_ticks_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('micro_ticks_color', 'Color')}
       </div>
@@ -762,36 +805,36 @@ class CustomCompassCardEditor extends LitElement {
       <div class="field-template-grid">
         <div class="text-field">
           <label>Header (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.header_text}
             @input=${e => this._valueChanged('header_text', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1"
             .value=${String(c.header_fontsize)}
             @input=${e => this._valueChanged('header_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Font weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.header_fontweight)}
             @input=${e => this._valueChanged('header_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.header_position)}
             @input=${e => this._valueChanged('header_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('header_fontcolor', 'Color')}
       </div>
@@ -809,36 +852,36 @@ class CustomCompassCardEditor extends LitElement {
       <div class="field-template-grid">
         <div class="text-field">
           <label>Footer (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.footer_text}
             @input=${e => this._valueChanged('footer_text', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1"
             .value=${String(c.footer_fontsize)}
             @input=${e => this._valueChanged('footer_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Font weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.footer_fontweight)}
             @input=${e => this._valueChanged('footer_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.footer_position)}
             @input=${e => this._valueChanged('footer_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('footer_fontcolor', 'Color')}
       </div>
@@ -860,62 +903,62 @@ class CustomCompassCardEditor extends LitElement {
       <div class="field-template-grid">
         <div class="text-field">
           <label>Text (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.field_1_template}
             @input=${e => this._valueChanged('field_1_template', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_1_fontsize)}
             @input=${e => this._valueChanged('field_1_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Font weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_1_fontweight)}
             @input=${e => this._valueChanged('field_1_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position (%)</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.field_1_position)}
             @input=${e => this._valueChanged('field_1_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('field_1_fontcolor', 'Color')}
       </div>
       <div class="field-unit-grid">
         <div class="text-field">
           <label>Unit</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.field_1_unit}
             @input=${e => this._valueChanged('field_1_unit', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_1_unit_fontsize)}
             @input=${e => this._valueChanged('field_1_unit_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_1_unit_fontweight)}
             @input=${e => this._valueChanged('field_1_unit_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('field_1_unit_fontcolor', 'Color')}
       </div>
@@ -934,62 +977,62 @@ class CustomCompassCardEditor extends LitElement {
       <div class="field-template-grid">
         <div class="text-field">
           <label>Text (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.field_2_template}
             @input=${e => this._valueChanged('field_2_template', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_2_fontsize)}
             @input=${e => this._valueChanged('field_2_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Font weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_2_fontweight)}
             @input=${e => this._valueChanged('field_2_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position (%)</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.field_2_position)}
             @input=${e => this._valueChanged('field_2_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('field_2_fontcolor', 'Color')}
       </div>
       <div class="field-unit-grid">
         <div class="text-field">
           <label>Unit</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.field_2_unit}
             @input=${e => this._valueChanged('field_2_unit', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_2_unit_fontsize)}
             @input=${e => this._valueChanged('field_2_unit_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_2_unit_fontweight)}
             @input=${e => this._valueChanged('field_2_unit_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('field_2_unit_fontcolor', 'Color')}
       </div>
@@ -1008,62 +1051,62 @@ class CustomCompassCardEditor extends LitElement {
       <div class="field-template-grid">
         <div class="text-field">
           <label>Text (jinja template allowed)</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.field_3_template}
             @input=${e => this._valueChanged('field_3_template', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
           <label>Font size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_3_fontsize)}
             @input=${e => this._valueChanged('field_3_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Font weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_3_fontweight)}
             @input=${e => this._valueChanged('field_3_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Position (%)</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="1"
             .value=${String(c.field_3_position)}
             @input=${e => this._valueChanged('field_3_position', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('field_3_fontcolor', 'Color')}
       </div>
       <div class="field-unit-grid">
         <div class="text-field">
           <label>Unit</label>
-          <ha-textfield
+          <cc-textfield
             .value=${c.field_3_unit}
             @input=${e => this._valueChanged('field_3_unit', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Size</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_3_unit_fontsize)}
             @input=${e => this._valueChanged('field_3_unit_fontsize', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         <div class="text-field">
           <label>Weight</label>
-          <ha-textfield
+          <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_3_unit_fontweight)}
             @input=${e => this._valueChanged('field_3_unit_fontweight', e)}
-          ></ha-textfield>
+          ></cc-textfield>
         </div>
         ${this._colorPicker('field_3_unit_fontcolor', 'Color')}
       </div>
@@ -1088,14 +1131,6 @@ class CustomCompassCardEditor extends LitElement {
 
     ha-expansion-panel + ha-expansion-panel > *:first-child {
       margin-top: 24px;
-    }
-
-    .compass-entity-grid {
-      display: grid;
-      grid-template-columns: 5fr 4fr 3fr;
-      gap: 8px;
-      margin-top: 8px;
-      margin-bottom: 16px;
     }
 
     .compass-styling-grid {
@@ -1136,6 +1171,14 @@ class CustomCompassCardEditor extends LitElement {
       gap: 8px;
       margin-top: 28px;
       margin-bottom: 16px;
+    }
+
+    .needle-template-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
     }
 
     .needle-color-grid {
@@ -1324,15 +1367,12 @@ class CustomCompassCardEditor extends LitElement {
       cursor: pointer;
       flex-shrink: 0;
     }
-    .color-row ha-textfield {
+    .color-row cc-textfield {
       flex: 1;
-      --mdc-text-field-fill-color: transparent;
-      --mdc-text-field-outlined-idle-border-color: transparent;
-      --mdc-text-field-outlined-hover-border-color: transparent;
+      --input-fill-color: transparent;
     }
 
-    ha-textfield,
-	ha-entity-picker {
+    cc-textfield {
       display: block;
       width: 100%;
     }
@@ -1361,128 +1401,159 @@ class CustomCompassCard extends LitElement {
 
   constructor() {
     super();
-    this._degrees        = 0;
-    this._prevDegrees    = null;
-    this._templatesDirty = false;
-    this._field1Value    = '';
-    this._field2Value    = '';
-    this._field3Value    = '';
-    this._headerValue    = '';
-    this._footerValue    = '';
-    this._marker1Degrees        = 0;
-    this._marker2Degrees        = 0;
-    this._backgroundImageUrl    = '';
-    this._needleImageUrl        = '';
-    this._error                 = false;
+    this._degrees             = 0;
+    this._prevDegrees         = null;
+    this._templateUnsubs      = [];
+    this._subscriptionsActive = false;
+    this._field1Value         = '';
+    this._field2Value         = '';
+    this._field3Value         = '';
+    this._headerValue         = '';
+    this._footerValue         = '';
+    this._marker1Degrees      = 0;
+    this._marker2Degrees      = 0;
+    this._backgroundImageUrl  = '';
+    this._needleImageUrl      = '';
+    this._error               = false;
   }
 
   setConfig(config) {
-    if (!config.compass_entity) {
-      throw new Error('You must define a compass_entity.');
-    }
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  willUpdate(changedProperties) {
-    if (!changedProperties.has('hass') || !this.config?.compass_entity) return;
-
-    const stateObj = this.hass.states[this.config.compass_entity];
-    if (stateObj) {
-      let valueToParse = stateObj.state;
-      const attr = this.config.compass_attribute;
-
-      if (attr && typeof attr === 'string' && attr.trim() !== '') {
-        const attrValue = stateObj.attributes[attr.trim()];
-        if (attrValue !== null && !isNaN(parseFloat(attrValue))) {
-          valueToParse = attrValue;
-        }
-      }
-
-      const raw = parseFloat(valueToParse);
-
-      if (!isNaN(raw)) {
-        const adj            = parseFloat(this.config.compass_adjustment) || 0;
-        const targetNormalized = ((raw + adj) % 360 + 360) % 360;
-        if (targetNormalized !== this._prevDegrees) {
-          // Shortest-arc: compute delta clamped to [-180, 180] so the CSS
-          // transition always animates the short way around the dial.
-          const currentMod = ((this._degrees % 360) + 360) % 360;
-          let delta = targetNormalized - currentMod;
-          if (delta > 180) delta -= 360;
-          if (delta < -180) delta += 360;
-          this._degrees        = this._degrees + delta;
-          this._prevDegrees    = targetNormalized;
-          this._templatesDirty = true;
-        }
-        this._error = false;
-      } else {
-        this._degrees        = 0;
-        this._prevDegrees    = null;
-        this._templatesDirty = true;
-        this._error          = true;
-      }
-    } else {
-      this._degrees        = 0;
-      this._prevDegrees    = null;
-      this._templatesDirty = true;
-      this._error          = true;
+  connectedCallback() {
+    super.connectedCallback();
+    if (this.hass && this.config && !this._subscriptionsActive) {
+      this._setupSubscriptions();
     }
   }
 
-  async _updateTemplates() {
-    this._templatesDirty = false;
-    const fieldDefs = [
-      { index: 1, show: this.config.field_1_show, template: this.config.field_1_template },
-      { index: 2, show: this.config.field_2_show, template: this.config.field_2_template },
-      { index: 3, show: this.config.field_3_show, template: this.config.field_3_template },
-    ];
-    for (const def of fieldDefs) {
-      if (!def.show) {
-        this[`_field${def.index}Value`] = '';
-        continue;
-      }
-      if (this._error) {
-        this[`_field${def.index}Value`] = 'Error';
-        continue;
-      }
-      if (def.template) {
-        this[`_field${def.index}Value`] = await this._evaluateTemplate(def.template, this._degrees);
-      }
-    }
-    if (this.config.header_show && this.config.header_text) {
-      this._headerValue = await this._evaluateTemplate(this.config.header_text, this._degrees);
-    } else {
-      this._headerValue = '';
-    }
-    if (this.config.footer_show && this.config.footer_text) {
-      this._footerValue = await this._evaluateTemplate(this.config.footer_text, this._degrees);
-    } else {
-      this._footerValue = '';
-    }
-    // Evaluate marker degree templates
-    const m1raw = await this._evaluateTemplate(String(this.config.marker_1_degrees), this._degrees);
-    this._marker1Degrees = ((parseFloat(m1raw) % 360) + 360) % 360;
-    const m2raw = await this._evaluateTemplate(String(this.config.marker_2_degrees), this._degrees);
-    this._marker2Degrees = ((parseFloat(m2raw) % 360) + 360) % 360;
-    // Evaluate background image URL template
-    if (this.config.background_image_show) {
-      this._backgroundImageUrl = await this._evaluateTemplate(String(this.config.background_image_url), this._degrees);
-    } else {
-      this._backgroundImageUrl = '';
-    }
-    // Evaluate needle image URL template
-    if (this.config.needle_image_show) {
-      this._needleImageUrl = await this._evaluateTemplate(String(this.config.needle_image_url), this._degrees);
-    } else {
-      this._needleImageUrl = '';
-    }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._teardownSubscriptions();
   }
 
   updated(changedProperties) {
     super.updated(changedProperties);
     this._scaleElements();
-    if (this._templatesDirty) {
-      this._updateTemplates();
+    if (this.hass && this.config) {
+      if (!this._subscriptionsActive || changedProperties.has('config')) {
+        this._setupSubscriptions();
+      }
+    }
+  }
+
+  _setupSubscriptions() {
+    this._teardownSubscriptions();
+    if (!this.hass?.connection || !this.config) return;
+    this._subscriptionsActive = true;
+
+    const sub = (template, callback) => {
+      const tmpl = String(template);
+      if (!tmpl.includes('{{')) {
+        // Plain string — use directly, no HA subscription needed
+        callback(tmpl);
+        return;
+      }
+      const unsub = this.hass.connection.subscribeMessage(
+        (msg) => callback(msg.result),
+        { type: 'render_template', template: tmpl }
+      );
+      this._templateUnsubs.push(unsub);
+    };
+
+    // Compass bearing
+    const compassCallback = (result) => {
+      const raw = parseFloat(result);
+      if (!isNaN(raw)) {
+        const targetNormalized = ((raw % 360) + 360) % 360;
+        if (targetNormalized !== this._prevDegrees) {
+          const currentMod = ((this._degrees % 360) + 360) % 360;
+          let delta = targetNormalized - currentMod;
+          if (delta > 180) delta -= 360;
+          if (delta < -180) delta += 360;
+          this._degrees     = this._degrees + delta;
+          this._prevDegrees = targetNormalized;
+        }
+        this._error = false;
+      } else {
+        this._degrees     = 0;
+        this._prevDegrees = null;
+        this._error       = true;
+      }
+      this._updateCompassDirectionFields();
+    };
+    sub(this.config.needle_template, compassCallback);
+
+    // Custom fields
+    for (const def of this._fieldDefs) {
+      if (!def.show) { this[`_field${def.index}Value`] = ''; continue; }
+      const idx = def.index;
+      // Template sent to HA untouched — ${compass_direction} is literal text to HA,
+      // only the {{ }} parts are evaluated. Replacement happens in the callback.
+      sub(String(def.template), (result) => {
+        this[`_field${idx}Value`] = String(result).replace('${compass_direction}', this.getCompassDirection(this._degrees));
+      });
+    }
+
+    // Header and footer
+    if (this.config.header_show && this.config.header_text) {
+      sub(this.config.header_text, (result) => { this._headerValue = result; });
+    } else { this._headerValue = ''; }
+
+    if (this.config.footer_show && this.config.footer_text) {
+      sub(this.config.footer_text, (result) => { this._footerValue = result; });
+    } else { this._footerValue = ''; }
+
+    // Marker degrees
+    for (const m of [
+      { key: 'marker_1_degrees', prop: '_marker1Degrees' },
+      { key: 'marker_2_degrees', prop: '_marker2Degrees' },
+    ]) {
+      sub(this.config[m.key], (result) => {
+        this[m.prop] = ((parseFloat(result) % 360) + 360) % 360;
+      });
+    }
+
+    // Background image URL
+    if (this.config.background_image_show) {
+      sub(this.config.background_image_url, (result) => { this._backgroundImageUrl = result; });
+    } else { this._backgroundImageUrl = ''; }
+
+    // Needle image URL
+    if (this.config.needle_image_show) {
+      sub(this.config.needle_image_url, (result) => { this._needleImageUrl = result; });
+    } else { this._needleImageUrl = ''; }
+  }
+
+  // Called from the bearing callback whenever _degrees changes.
+  // Handles fields whose template is a plain string containing ${compass_direction}.
+  // Mixed templates (${compass_direction} + Jinja2) are handled by their HA callback.
+  _updateCompassDirectionFields() {
+    const direction = this.getCompassDirection(this._degrees);
+    for (const def of this._fieldDefs) {
+      if (!def.show) continue;
+      const tmpl = String(def.template);
+      if (!tmpl.includes('${compass_direction}')) continue;
+      if (tmpl.includes('{{')) continue; // mixed case — HA callback handles it
+      this[`_field${def.index}Value`] = tmpl.replace('${compass_direction}', direction);
+    }
+  }
+
+  get _fieldDefs() {
+    return [
+      { index: 1, show: this.config.field_1_show, template: this.config.field_1_template },
+      { index: 2, show: this.config.field_2_show, template: this.config.field_2_template },
+      { index: 3, show: this.config.field_3_show, template: this.config.field_3_template },
+    ];
+  }
+
+  _teardownSubscriptions() {
+    const unsubs = this._templateUnsubs;
+    this._templateUnsubs      = [];
+    this._subscriptionsActive = false;
+    for (const unsub of unsubs) {
+      Promise.resolve(unsub).then(fn => fn()).catch(() => {});
     }
   }
 
@@ -1516,18 +1587,6 @@ class CustomCompassCard extends LitElement {
     const wrapper = this.shadowRoot.querySelector('.compass-ticks-wrapper');
     if (wrapper) {
       this.style.setProperty('--cc-circle-size', `${wrapper.offsetWidth}px`);
-    }
-  }
-
-  async _evaluateTemplate(template, degrees) {
-    try {
-      const processed = template.replace('${compass_direction}', this.getCompassDirection(degrees));
-      if (!processed.includes('{{')) return processed;
-      const response = await this.hass.callApi('POST', 'template', { template: processed });
-      return response;
-    } catch (e) {
-      console.error('CustomCompassCard: Error evaluating template:', template, e);
-      return 'Error';
     }
   }
 
