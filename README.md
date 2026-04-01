@@ -26,6 +26,11 @@ Custom Compass Card is very customizable. The same card, with different settings
 | :-------: |
 | ![Space](screenshots/compass5.png) |
 
+| Multiple Needles |
+| :-------: |
+| ![Space](screenshots/clock0.png) |
+| This will be possible soon! |
+
 | Space |
 | :-------: |
 | ![Space](screenshots/dashboard5.png) |
