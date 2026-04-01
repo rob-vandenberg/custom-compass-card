@@ -1,8 +1,9 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.7.143';
+const CARD_VERSION = '3.7.144';
 // ─── Card Version History ─────────────────────────────────────────────────────
+// v3.7.144: Version bump to force HACS cache refresh — clears corrupt hacs.json cached from v3.7.143 initial release
 // v3.7.143: Replace ha-textfield with own cc-textfield component — future-proof against HA 2026.5 removal; fixes width issue in 2026.4
 // v3.7.142: Fix TypeError in field callback — convert HA result to String before calling replace()
 // v3.7.141: Remove unnecessary _fieldRawValues; simplify ${compass_direction} handling
