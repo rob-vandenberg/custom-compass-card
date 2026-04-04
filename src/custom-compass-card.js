@@ -1,8 +1,41 @@
 import { LitElement, html, svg, css } from 'https://unpkg.com/lit@2.0.0/index.js?module';
+import { live } from 'https://unpkg.com/lit@2.0.0/directives/live.js?module';
 
 // ─── Card Version ─────────────────────────────────────────────────────────────
-const CARD_VERSION = '3.7.144';
+const CARD_VERSION = '3.8.225';
 // ─── Card Version History ─────────────────────────────────────────────────────
+// v3.8.225: Refactor _colorPicker to accept value+callback — all color fields now use single method, no duplication
+// v3.8.224: Suppress console warnings when typing hex colors — only pass valid 6-digit hex to color input
+// v3.8.223: Scale bezel_size using host element offsetWidth — truly unaffected by internal layout
+// v3.8.222: Scale bezel_size using compass-container width — no feedback loop, correct proportional scaling
+// v3.8.221: Revert _scaleElements to 3.8.214 state — remove bezel_size scaling which caused feedback loop
+// v3.8.220: Fix _scaleElements early return — only require compass-circle, handle compass-container separately
+// v3.8.219: Revert compass-circle DOM check — it fires on every recreation not just first render
+// v3.8.218: Skip needle render on first render (compass-circle not yet in DOM) — eliminates oversized needle flash
+// v3.8.217: Fix scale calculation — use compass-circle for _scale, compass-container for border-size only
+// v3.8.216: Fix infinite resize loop — use compass-container for scale calculation, not compass-circle
+// v3.8.215: Fix bezel_size scaling — now multiplied by _scale factor like bezel_width
+// v3.8.214: Fix needle reset to 0 on config changes — willUpdate() seeds _needleDegrees from module-level cache before render
+// v3.8.213: Rename marker length property to height — matches editor label change
+// v3.8.212: Add name property to needles — shown as panel header, editable field at top of needle panel
+// v3.8.211: Reorder editor CSS to match HTML order; fix cc-textfield input vertical alignment
+// v3.8.210: Revert cc-textfield to native input; add live() to fix minus/decimal display; add min-width:0 to color-field
+// v3.8.209: Add min-width:0 to .text-field grid item
+// v3.8.208: Fix cc-textfield wa-input layout — hide label/hint parts, constrain width with min-width:0; fix handler null check
+// v3.8.207: Replace native <input> in cc-textfield with wa-input, mirroring ha-input
+// v3.8.206: Fix numeric input — replicate ha-form-float logic for minus and decimal handling
+// v3.8.205: Remove mutual exclusivity between cardinal labels and primary ticks — both can be enabled simultaneously
+// v3.8.204: Cardinal labels and primary ticks can now both render at same position
+// v3.8.203: Fix cardinals-styling-grid — missing Font size text-field wrapper was dropped in previous edit
+// v3.8.202: Separate cardinals-styling-grid CSS from tick-styling-grid; update tick-styling-grid to 5fr 5fr 5fr 5fr 9fr
+// v3.8.201: Fix cardinal labels — render independently of major_ticks_show
+// v3.8.151: Reverse needle render order so needle 1 renders on top
+// v3.8.150: Increase toggle-field gap to 8px for better label-to-switch spacing
+// v3.8.149: Remove min-width from toggle-field label — fixes toggle spacing in needle panel
+// v3.8.148: Move Rotate compass toggle from Needle panel to Compass configuration panel
+// v3.8.147: Multiple needles — needles[] array replaces single needle_* flat keys; full per-needle config; compass_rotate wraps all needles
+// v3.8.146: Restyle add/remove marker buttons to match mwc-button appearance
+// v3.7.145: Replace marker_1/2 flat keys with markers[] array; add flip option; unlimited markers; dynamic editor
 // v3.7.144: Version bump to force HACS cache refresh — clears corrupt hacs.json cached from v3.7.143 initial release
 // v3.7.143: Replace ha-textfield with own cc-textfield component — future-proof against HA 2026.5 removal; fixes width issue in 2026.4
 // v3.7.142: Fix TypeError in field callback — convert HA result to String before calling replace()
@@ -18,6 +51,46 @@ const CARD_VERSION = '3.7.144';
 // v3.7.132: Move bearing template field from Compass panel to Needle panel; rename CSS class to needle-template-grid
 // v3.7.131: Replace compass entity/attribute/adjustment with needle_template (Jinja2); remove willUpdate entity watch
 
+// ─── Needle Degrees Cache ─────────────────────────────────────────────────────
+// Survives element recreation by HA's editor. Keyed by needle templates.
+// Allows willUpdate() to seed _needleDegrees synchronously before first render.
+const _needleDegreesCache = new Map();
+
+// ─── Default Marker ───────────────────────────────────────────────────────────
+const DEFAULT_MARKER = {
+  show:     true,
+  degrees:  '0',
+  height:   5,
+  width:    4,
+  position: 0,
+  color:    '#FF0000',
+  flip:     false,
+};
+
+// ─── Default Needle ───────────────────────────────────────────────────────────
+const DEFAULT_NEEDLE = {
+  name:         '',
+  show:         true,
+  template:     "{{ state_attr('sun.sun', 'azimuth') | float(0) }}",
+  invert:       false,
+  rotate:       false,
+  color_1:      '#FF0000',
+  color_1_pos:  50,
+  color_2:      '#EEEEEE',
+  color_2_pos:  50,
+  height:       100,
+  width:        10,
+  position:     -10,
+  morph:        50,
+  curve:        0,
+  image_show:   false,
+  image_url:    '/local/community/custom-compass-card/moon.png',
+  image_scale:  100,
+  image_x:      0,
+  image_y:      0,
+  image_rotate: 0,
+};
+
 // ─── Default Configuration ────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
   background_color:         '#101010',
@@ -30,38 +103,9 @@ const DEFAULT_CONFIG = {
   background_image_x:       0,
   background_image_y:       0,
   background_image_rotate:  0,
-  needle_show:              true,
-  needle_template:          "{{ state_attr('sun.sun', 'azimuth') | float(0) }}",
-  needle_invert:            false,
-  needle_rotate:            false,
-  needle_color_1:           '#FF0000',
-  needle_color_1_pos:       50,
-  needle_color_2:           '#EEEEEE',
-  needle_color_2_pos:       50,
-  needle_height:            100,
-  needle_width:             10,
-  needle_position:          -10,
-  needle_morph:             50,
-  needle_curve:             0,
-  needle_image_show:        false,
-  needle_image_url:         '/local/community/custom-compass-card/moon.png',
-  needle_image_scale:       100,
-  needle_image_x:           0,
-  needle_image_y:           0,
-  needle_image_rotate:      0,
+  needles:                  [{ ...DEFAULT_NEEDLE }],
   compass_rotate:           false,
-  marker_1_show:            false,
-  marker_1_degrees:         '45',
-  marker_1_length:          5,
-  marker_1_width:           4,
-  marker_1_position:        0,
-  marker_1_color:           '#FF0000',
-  marker_2_show:            false,
-  marker_2_degrees:         '315',
-  marker_2_length:          5,
-  marker_2_width:           4,
-  marker_2_position:        0,
-  marker_2_color:           '#2196F3',
+  markers:                  [],
   cardinals_show:           true,
   cardinal_north:           'N',
   cardinal_east:            'E',
@@ -72,16 +116,19 @@ const DEFAULT_CONFIG = {
   cardinals_position:       1.5,
   cardinals_fontcolor:      '#EEEEEE',
   major_ticks_show:         false,
+  major_ticks_divisions:    4,
   major_ticks_length:       6,
   major_ticks_width:        2,
   major_ticks_position:     -3.5,
   major_ticks_color:        '#CCCCCC',
   minor_ticks_show:         true,
+  minor_ticks_divisions:    8,
   minor_ticks_length:       3,
   minor_ticks_width:        1.5,
   minor_ticks_position:     -4.5,
   minor_ticks_color:        '#AAAAAA',
   micro_ticks_show:         true,
+  micro_ticks_divisions:    16,
   micro_ticks_length:       0,
   micro_ticks_width:        2,
   micro_ticks_position:     -6.5,
@@ -132,15 +179,18 @@ const DEFAULT_CONFIG = {
 };
 
 // ─── cc-textfield ─────────────────────────────────────────────────────────────
-// Own text field component — replaces cc-textfield which was removed in HA 2026.5.
+// Own text field component — replaces ha-textfield removed in HA 2026.5.
 // Exposes .value and .type so _valueChanged() works identically to before.
+// Uses live() to preserve intermediate input states (e.g. '-', '1.') without
+// Lit overwriting the displayed value on re-render.
 class CcTextfield extends LitElement {
   static properties = {
-    value: { type: String },
-    type:  { type: String },
-    step:  { type: String },
-    min:   { type: String },
-    max:   { type: String },
+    value:       { type: String },
+    type:        { type: String },
+    step:        { type: String },
+    min:         { type: String },
+    max:         { type: String },
+    placeholder: { type: String },
   };
 
   static styles = css`
@@ -153,7 +203,7 @@ class CcTextfield extends LitElement {
       width: 100%;
       box-sizing: border-box;
       height: 56px;
-      padding: 16px 12px 0 12px;
+      padding: 0 12px;
       background: var(--input-fill-color, rgba(0,0,0,0.06));
       border: none;
       border-bottom: 1px solid var(--secondary-text-color, #888);
@@ -172,7 +222,7 @@ class CcTextfield extends LitElement {
   render() {
     return html`
       <input
-        .value=${this.value ?? ''}
+        .value=${live(this.value ?? '')}
         type=${this.type || 'text'}
         step=${this.step || ''}
         min=${this.min || ''}
@@ -200,6 +250,18 @@ class CustomCompassCardEditor extends LitElement {
     this._config = { ...DEFAULT_CONFIG, ...config };
   }
 
+  // Mirrors ha-form-float._handleInput logic exactly.
+  // Returns the parsed number, undefined if the value is incomplete/invalid,
+  // or null to signal "return early, do not fire config-changed".
+  _parseNumber(raw) {
+    const v = String(raw).replace(',', '.');
+    if (v === '-' || v === '-0' || v.endsWith('.')) return null;
+    if (v.includes('.') && v.endsWith('0')) return null;
+    if (v === '') return undefined;
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  }
+
   _valueChanged(key, ev) {
     if (!this._config || !this.hass) return;
     let value;
@@ -211,8 +273,9 @@ class CustomCompassCardEditor extends LitElement {
       value = ev.target.value;
     }
     if (ev.target.type === 'number') {
-      value = parseFloat(value);
-      if (isNaN(value)) return;
+      const parsed = this._parseNumber(value);
+      if (parsed == null) return;
+      value = parsed;
     }
     this._config = { ...this._config, [key]: value };
     this.dispatchEvent(new CustomEvent('config-changed', {
@@ -222,25 +285,99 @@ class CustomCompassCardEditor extends LitElement {
     }));
   }
 
-  _colorPicker(key, label) {
-    const value = this._config[key] || '#ffffff';
+  _colorPicker(label, value, onChange) {
+    const colorValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#ffffff';
     return html`
       <div class="color-field">
         <label>${label}</label>
         <div class="color-row">
           <input
             type="color"
-            .value=${value.length >= 7 ? value.substring(0, 7) : value}
-            @input=${e => this._valueChanged(key, e)}
+            .value=${colorValue}
+            @input=${onChange}
           />
           <cc-textfield
             .value=${value}
             placeholder="#RRGGBB or #RRGGBBAA"
-            @input=${e => this._valueChanged(key, e)}
+            @input=${onChange}
           ></cc-textfield>
         </div>
       </div>
     `;
+  }
+
+  _addNeedle() {
+    const needles = [...(this._config.needles || []), { ...DEFAULT_NEEDLE }];
+    this._config = { ...this._config, needles };
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config: this._config }, bubbles: true, composed: true,
+    }));
+  }
+
+  _removeNeedle(i) {
+    const needles = this._config.needles.filter((_, idx) => idx !== i);
+    this._config = { ...this._config, needles };
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config: this._config }, bubbles: true, composed: true,
+    }));
+  }
+
+  _needleChanged(i, key, ev) {
+    let value;
+    if (ev.target.tagName === 'HA-SWITCH') {
+      value = ev.target.checked;
+    } else {
+      value = ev.target.value;
+      if (ev.target.type === 'number') {
+        const parsed = this._parseNumber(value);
+        if (parsed == null) return;
+        value = parsed;
+      }
+    }
+    const needles = this._config.needles.map((n, idx) =>
+      idx === i ? { ...n, [key]: value } : n
+    );
+    this._config = { ...this._config, needles };
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config: this._config }, bubbles: true, composed: true,
+    }));
+  }
+
+  _addMarker() {
+    const markers = [...(this._config.markers || []), { ...DEFAULT_MARKER }];
+    this._config = { ...this._config, markers };
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config: this._config }, bubbles: true, composed: true,
+    }));
+  }
+
+  _removeMarker(i) {
+    const markers = this._config.markers.filter((_, idx) => idx !== i);
+    this._config = { ...this._config, markers };
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config: this._config }, bubbles: true, composed: true,
+    }));
+  }
+
+  _markerChanged(i, key, ev) {
+    let value;
+    if (ev.target.tagName === 'HA-SWITCH') {
+      value = ev.target.checked;
+    } else {
+      value = ev.target.value;
+      if (ev.target.type === 'number') {
+        const parsed = this._parseNumber(value);
+        if (parsed == null) return;
+        value = parsed;
+      }
+    }
+    const markers = this._config.markers.map((m, idx) =>
+      idx === i ? { ...m, [key]: value } : m
+    );
+    this._config = { ...this._config, markers };
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config: this._config }, bubbles: true, composed: true,
+    }));
   }
 
   render() {
@@ -253,8 +390,8 @@ class CustomCompassCardEditor extends LitElement {
 
       <!-- Compass styling -->
       <div class="compass-styling-grid">
-        ${this._colorPicker('background_color', 'Background')}
-        ${this._colorPicker('bezel_color', 'Bezel color')}
+        ${this._colorPicker('Background', this._config['background_color'] || '#ffffff', e => this._valueChanged('background_color', e))}
+        ${this._colorPicker('Bezel color', this._config['bezel_color'] || '#ffffff', e => this._valueChanged('bezel_color', e))}
         <div class="text-field">
           <label>Bezel width</label>
           <cc-textfield
@@ -294,14 +431,6 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="background-image-styling-grid">
         <div class="text-field">
-          <label>Scale (%)</label>
-          <cc-textfield
-            type="number" step="1" min="1"
-            .value=${String(c.background_image_scale)}
-            @input=${e => this._valueChanged('background_image_scale', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
           <label>X pos</label>
           <cc-textfield
             type="number" step="0.5"
@@ -318,171 +447,19 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
+          <label>Scale (%)</label>
+          <cc-textfield
+            type="number" step="1" min="1"
+            .value=${String(c.background_image_scale)}
+            @input=${e => this._valueChanged('background_image_scale', e)}
+          ></cc-textfield>
+        </div>
+        <div class="text-field">
           <label>Rotate</label>
           <cc-textfield
             type="number" step="1"
             .value=${String(c.background_image_rotate)}
             @input=${e => this._valueChanged('background_image_rotate', e)}
-          ></cc-textfield>
-        </div>
-      </div>
-
-      </ha-expansion-panel>
-
-      <ha-expansion-panel header="Needle configuration" outlined>
-
-      <!-- Needle toggles -->
-      <div class="needle-toggles-grid">
-        <div class="toggle-field">
-          <label>Show needle</label>
-          <ha-switch
-            .checked=${c.needle_show}
-            @change=${e => this._valueChanged('needle_show', e)}
-          ></ha-switch>
-        </div>  
-        <div class="toggle-field">
-          <label>Invert needle</label>
-          <ha-switch
-            .checked=${c.needle_invert}
-            @change=${e => this._valueChanged('needle_invert', e)}
-          ></ha-switch>
-        </div>  
-        <div class="toggle-field">
-          <label>Rotate needle</label>
-          <ha-switch
-            .checked=${c.needle_rotate}
-            @change=${e => this._valueChanged('needle_rotate', e)}
-          ></ha-switch>
-        </div>  
-      </div>
-
-      <!-- Needle bearing template -->
-      <div class="needle-template-grid">
-        <div class="text-field">
-          <label>Bearing (jinja template)</label>
-          <cc-textfield
-            .value=${c.needle_template}
-            @input=${e => this._valueChanged('needle_template', e)}
-          ></cc-textfield>
-        </div>
-      </div>
-
-      <!-- Needle colors -->
-      <div class="needle-color-grid">
-        ${this._colorPicker('needle_color_1', 'Needle color 1')}
-        <div class="text-field">
-          <label>Pos (%)</label>
-          <cc-textfield
-            type="number" step="1" min="0" max="100"
-            .value=${String(c.needle_color_1_pos)}
-            @input=${e => this._valueChanged('needle_color_1_pos', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('needle_color_2', 'Needle color 2')}
-        <div class="text-field">
-          <label>Pos (%)</label>
-          <cc-textfield
-            type="number" step="1" min="0" max="100"
-            .value=${String(c.needle_color_2_pos)}
-            @input=${e => this._valueChanged('needle_color_2_pos', e)}
-          ></cc-textfield>
-        </div>
-      </div>
-
-      <!-- Needle dimensions -->
-      <div class="needle-dimensions-grid">
-        <div class="text-field">
-          <label>Height</label>
-          <cc-textfield
-            type="number" step="1" min="4"
-            .value=${String(c.needle_height)}
-            @input=${e => this._valueChanged('needle_height', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Width</label>
-          <cc-textfield
-            type="number" step="1" min="1"
-            .value=${String(c.needle_width)}
-            @input=${e => this._valueChanged('needle_width', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Position</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.needle_position)}
-            @input=${e => this._valueChanged('needle_position', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Morph</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.needle_morph)}
-            @input=${e => this._valueChanged('needle_morph', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Curve</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.needle_curve)}
-            @input=${e => this._valueChanged('needle_curve', e)}
-          ></cc-textfield>
-        </div>
-      </div>
-
-      <!-- Needle image -->
-      <div class="needle-image-toggles-grid">
-        <div class="toggle-field">
-          <label>Needle image</label>
-          <ha-switch
-            .checked=${c.needle_image_show}
-            @change=${e => this._valueChanged('needle_image_show', e)}
-          ></ha-switch>
-        </div>
-      </div>
-      <div class="needle-image-template-grid">
-        <div class="text-field">
-          <label>URL (jinja template allowed)</label>
-          <cc-textfield
-            .value=${String(c.needle_image_url)}
-            @input=${e => this._valueChanged('needle_image_url', e)}
-          ></cc-textfield>
-        </div>
-      </div>
-      <div class="needle-image-styling-grid">
-        <div class="text-field">
-          <label>Scale (%)</label>
-          <cc-textfield
-            type="number" step="1" min="1"
-            .value=${String(c.needle_image_scale)}
-            @input=${e => this._valueChanged('needle_image_scale', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>X pos</label>
-          <cc-textfield
-            type="number" step="0.5"
-            .value=${String(c.needle_image_x)}
-            @input=${e => this._valueChanged('needle_image_x', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Y pos</label>
-          <cc-textfield
-            type="number" step="0.5"
-            .value=${String(c.needle_image_y)}
-            @input=${e => this._valueChanged('needle_image_y', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Rotate</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.needle_image_rotate)}
-            @input=${e => this._valueChanged('needle_image_rotate', e)}
           ></cc-textfield>
         </div>
       </div>
@@ -495,106 +472,262 @@ class CustomCompassCardEditor extends LitElement {
             .checked=${c.compass_rotate}
             @change=${e => this._valueChanged('compass_rotate', e)}
           ></ha-switch>
-          <span class="toggle-hint">(locks the needle and rotates the compass)</span>
+          <span class="toggle-hint">(rotates compass so needle 1 always points north)</span>
         </div>
+      </div>
+
+      </ha-expansion-panel>
+
+      <ha-expansion-panel header="Needle configuration" outlined>
+
+      ${(c.needles || []).map((n, i) => html`
+        <ha-expansion-panel header="${n.name || 'Needle ' + (i + 1)}" outlined>
+
+          <!-- Name -->
+          <div class="needle-name-grid">
+            <div class="text-field">
+              <label>Name (optional)</label>
+              <cc-textfield
+                .value=${String(n.name || '')}
+                @input=${e => this._needleChanged(i, 'name', e)}
+              ></cc-textfield>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          <div class="needle-toggles-grid">
+            <div class="toggle-field">
+              <label>Show</label>
+              <ha-switch
+                .checked=${n.show}
+                @change=${e => this._needleChanged(i, 'show', e)}
+              ></ha-switch>
+            </div>
+            <div class="toggle-field">
+              <label>Invert</label>
+              <ha-switch
+                .checked=${n.invert}
+                @change=${e => this._needleChanged(i, 'invert', e)}
+              ></ha-switch>
+            </div>
+            <div class="toggle-field">
+              <label>Rotate 180°</label>
+              <ha-switch
+                .checked=${n.rotate}
+                @change=${e => this._needleChanged(i, 'rotate', e)}
+              ></ha-switch>
+            </div>
+          </div>
+
+          <!-- Bearing template -->
+          <div class="needle-template-grid">
+            <div class="text-field">
+              <label>Bearing (jinja template)</label>
+              <cc-textfield
+                .value=${String(n.template)}
+                @input=${e => this._needleChanged(i, 'template', e)}
+              ></cc-textfield>
+            </div>
+          </div>
+
+          <!-- Colors -->
+          <div class="needle-color-grid">
+            ${this._colorPicker('Color 1', n.color_1 || '#FF0000', e => this._needleChanged(i, 'color_1', e))}
+            <div class="text-field">
+              <label>Pos (%)</label>
+              <cc-textfield
+                type="number" step="1" min="0" max="100"
+                .value=${String(n.color_1_pos)}
+                @input=${e => this._needleChanged(i, 'color_1_pos', e)}
+              ></cc-textfield>
+            </div>
+            ${this._colorPicker('Color 2', n.color_2 || '#EEEEEE', e => this._needleChanged(i, 'color_2', e))}
+            <div class="text-field">
+              <label>Pos (%)</label>
+              <cc-textfield
+                type="number" step="1" min="0" max="100"
+                .value=${String(n.color_2_pos)}
+                @input=${e => this._needleChanged(i, 'color_2_pos', e)}
+              ></cc-textfield>
+            </div>
+          </div>
+
+          <!-- Dimensions -->
+          <div class="needle-dimensions-grid">
+            <div class="text-field">
+              <label>Position</label>
+              <cc-textfield
+                type="number" step="1"
+                .value=${String(n.position)}
+                @input=${e => this._needleChanged(i, 'position', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Height</label>
+              <cc-textfield
+                type="number" step="1" min="4"
+                .value=${String(n.height)}
+                @input=${e => this._needleChanged(i, 'height', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Width</label>
+              <cc-textfield
+                type="number" step="1" min="1"
+                .value=${String(n.width)}
+                @input=${e => this._needleChanged(i, 'width', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Morph</label>
+              <cc-textfield
+                type="number" step="1"
+                .value=${String(n.morph)}
+                @input=${e => this._needleChanged(i, 'morph', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Curve</label>
+              <cc-textfield
+                type="number" step="1"
+                .value=${String(n.curve)}
+                @input=${e => this._needleChanged(i, 'curve', e)}
+              ></cc-textfield>
+            </div>
+          </div>
+
+          <!-- Needle image -->
+          <div class="needle-image-toggles-grid">
+            <div class="toggle-field">
+              <label>Needle image</label>
+              <ha-switch
+                .checked=${n.image_show}
+                @change=${e => this._needleChanged(i, 'image_show', e)}
+              ></ha-switch>
+            </div>
+          </div>
+          <div class="needle-image-template-grid">
+            <div class="text-field">
+              <label>URL (jinja template allowed)</label>
+              <cc-textfield
+                .value=${String(n.image_url)}
+                @input=${e => this._needleChanged(i, 'image_url', e)}
+              ></cc-textfield>
+            </div>
+          </div>
+          <div class="needle-image-styling-grid">
+            <div class="text-field">
+              <label>X pos</label>
+              <cc-textfield
+                type="number" step="0.5"
+                .value=${String(n.image_x)}
+                @input=${e => this._needleChanged(i, 'image_x', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Y pos</label>
+              <cc-textfield
+                type="number" step="0.5"
+                .value=${String(n.image_y)}
+                @input=${e => this._needleChanged(i, 'image_y', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Scale (%)</label>
+              <cc-textfield
+                type="number" step="1" min="1"
+                .value=${String(n.image_scale)}
+                @input=${e => this._needleChanged(i, 'image_scale', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Rotate</label>
+              <cc-textfield
+                type="number" step="1"
+                .value=${String(n.image_rotate)}
+                @input=${e => this._needleChanged(i, 'image_rotate', e)}
+              ></cc-textfield>
+            </div>
+          </div>
+
+          <!-- Remove button -->
+          <div class="marker-remove-grid">
+            <button class="marker-remove-btn" @click=${() => this._removeNeedle(i)}>Remove needle</button>
+          </div>
+
+        </ha-expansion-panel>
+      `)}
+
+      <div class="marker-add-grid">
+        <button class="marker-add-btn" @click=${this._addNeedle}>+ Add needle</button>
       </div>
 
       </ha-expansion-panel>
 
       <ha-expansion-panel header="Markers configuration" outlined>
 
-      <!-- Marker 1 -->
-      <div class="marker-toggles-grid">
-        <div class="toggle-field">
-          <label>Show marker 1</label>
-          <ha-switch
-            .checked=${c.marker_1_show}
-            @change=${e => this._valueChanged('marker_1_show', e)}
-          ></ha-switch>
-        </div>
-      </div>
-      <div class="marker-template-grid">
-        <div class="text-field">
-          <label>Degrees (jinja template allowed)</label>
-          <cc-textfield
-            .value=${String(c.marker_1_degrees)}
-            @input=${e => this._valueChanged('marker_1_degrees', e)}
-          ></cc-textfield>
-        </div>
-      </div>
-      <div class="marker-styling-grid">
-        <div class="text-field">
-          <label>Length</label>
-          <cc-textfield
-            type="number" step="0.1" min="0"
-            .value=${String(c.marker_1_length)}
-            @input=${e => this._valueChanged('marker_1_length', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Width</label>
-          <cc-textfield
-            type="number" step="0.1" min="0"
-            .value=${String(c.marker_1_width)}
-            @input=${e => this._valueChanged('marker_1_width', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Position</label>
-          <cc-textfield
-            type="number" step="0.5"
-            .value=${String(c.marker_1_position)}
-            @input=${e => this._valueChanged('marker_1_position', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('marker_1_color', 'Color')}
-      </div>
+      ${(c.markers || []).map((m, i) => html`
+        <ha-expansion-panel header="Marker ${i + 1}" outlined>
+          <div class="marker-toggles-grid">
+            <div class="toggle-field">
+              <label>Show</label>
+              <ha-switch
+                .checked=${m.show}
+                @change=${e => this._markerChanged(i, 'show', e)}
+              ></ha-switch>
+            </div>
+            <div class="toggle-field">
+              <label>Flip</label>
+              <ha-switch
+                .checked=${m.flip}
+                @change=${e => this._markerChanged(i, 'flip', e)}
+              ></ha-switch>
+            </div>
+          </div>
+          <div class="marker-template-grid">
+            <div class="text-field">
+              <label>Degrees (jinja template allowed)</label>
+              <cc-textfield
+                .value=${String(m.degrees)}
+                @input=${e => this._markerChanged(i, 'degrees', e)}
+              ></cc-textfield>
+            </div>
+          </div>
+          <div class="marker-styling-grid">
+            <div class="text-field">
+              <label>Position</label>
+              <cc-textfield
+                type="number" step="0.5"
+                .value=${String(m.position)}
+                @input=${e => this._markerChanged(i, 'position', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Height</label>
+              <cc-textfield
+                type="number" step="0.1" min="0"
+                .value=${String(m.height)}
+                @input=${e => this._markerChanged(i, 'height', e)}
+              ></cc-textfield>
+            </div>
+            <div class="text-field">
+              <label>Width</label>
+              <cc-textfield
+                type="number" step="0.1" min="0"
+                .value=${String(m.width)}
+                @input=${e => this._markerChanged(i, 'width', e)}
+              ></cc-textfield>
+            </div>
+            ${this._colorPicker('Color', m.color || '#FF0000', e => this._markerChanged(i, 'color', e))}
+          </div>
+          <div class="marker-remove-grid">
+            <button class="marker-remove-btn" @click=${() => this._removeMarker(i)}>Remove marker</button>
+          </div>
+        </ha-expansion-panel>
+      `)}
 
-      <!-- Marker 2 -->
-      <div class="marker-toggles-grid">
-        <div class="toggle-field">
-          <label>Show marker 2</label>
-          <ha-switch
-            .checked=${c.marker_2_show}
-            @change=${e => this._valueChanged('marker_2_show', e)}
-          ></ha-switch>
-        </div>
-      </div>
-      <div class="marker-template-grid">
-        <div class="text-field">
-          <label>Degrees (jinja template allowed)</label>
-          <cc-textfield
-            .value=${String(c.marker_2_degrees)}
-            @input=${e => this._valueChanged('marker_2_degrees', e)}
-          ></cc-textfield>
-        </div>
-      </div>
-      <div class="marker-styling-grid">
-        <div class="text-field">
-          <label>Length</label>
-          <cc-textfield
-            type="number" step="0.1" min="0"
-            .value=${String(c.marker_2_length)}
-            @input=${e => this._valueChanged('marker_2_length', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Width</label>
-          <cc-textfield
-            type="number" step="0.1" min="0"
-            .value=${String(c.marker_2_width)}
-            @input=${e => this._valueChanged('marker_2_width', e)}
-          ></cc-textfield>
-        </div>
-        <div class="text-field">
-          <label>Position</label>
-          <cc-textfield
-            type="number" step="0.5"
-            .value=${String(c.marker_2_position)}
-            @input=${e => this._valueChanged('marker_2_position', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('marker_2_color', 'Color')}
+      <div class="marker-add-grid">
+        <button class="marker-add-btn" @click=${this._addMarker}>+ Add marker</button>
       </div>
 
       </ha-expansion-panel>
@@ -607,13 +740,11 @@ class CustomCompassCardEditor extends LitElement {
           <label>Cardinal labels</label>
           <ha-switch
             .checked=${c.cardinals_show}
-            @change=${e => {
-              this._valueChanged('cardinals_show', e);
-              if (e.target.checked) this._valueChanged('major_ticks_show', { target: { tagName: 'HA-SWITCH', checked: false } });
-            }}
+            @change=${e => this._valueChanged('cardinals_show', e)}
           ></ha-switch>
         </div>
       </div>
+      
       <div class="cardinal-labels-grid">
         <div class="text-field">
           <label>North</label>
@@ -644,7 +775,16 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
       </div>
-      <div class="tick-styling-grid">
+      
+      <div class="cardinals-styling-grid">
+        <div class="text-field">
+          <label>Position</label>
+          <cc-textfield
+            type="number" step="0.5"
+            .value=${String(c.cardinals_position)}
+            @input=${e => this._valueChanged('cardinals_position', e)}
+          ></cc-textfield>
+        </div>
         <div class="text-field">
           <label>Font size</label>
           <cc-textfield
@@ -661,15 +801,7 @@ class CustomCompassCardEditor extends LitElement {
             @input=${e => this._valueChanged('cardinals_fontweight', e)}
           ></cc-textfield>
         </div>
-        <div class="text-field">
-          <label>Position</label>
-          <cc-textfield
-            type="number" step="0.5"
-            .value=${String(c.cardinals_position)}
-            @input=${e => this._valueChanged('cardinals_position', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('cardinals_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['cardinals_fontcolor'] || '#ffffff', e => this._valueChanged('cardinals_fontcolor', e))}
       </div>
 
       <!-- Primary ticks -->
@@ -678,14 +810,19 @@ class CustomCompassCardEditor extends LitElement {
           <label>Primary ticks</label>
           <ha-switch
             .checked=${c.major_ticks_show}
-            @change=${e => {
-              this._valueChanged('major_ticks_show', e);
-              if (e.target.checked) this._valueChanged('cardinals_show', { target: { tagName: 'HA-SWITCH', checked: false } });
-            }}
+            @change=${e => this._valueChanged('major_ticks_show', e)}
           ></ha-switch>
         </div>
       </div>
       <div class="tick-styling-grid">
+        <div class="text-field">
+          <label>Position</label>
+          <cc-textfield
+            type="number" step="0.5"
+            .value=${String(c.major_ticks_position)}
+            @input=${e => this._valueChanged('major_ticks_position', e)}
+          ></cc-textfield>
+        </div>
         <div class="text-field">
           <label>Length</label>
           <cc-textfield
@@ -703,14 +840,14 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Position</label>
+          <label>Divisions</label>
           <cc-textfield
-            type="number" step="0.5"
-            .value=${String(c.major_ticks_position)}
-            @input=${e => this._valueChanged('major_ticks_position', e)}
+            type="number" step="1" min="1"
+            .value=${String(c.major_ticks_divisions)}
+            @input=${e => this._valueChanged('major_ticks_divisions', e)}
           ></cc-textfield>
         </div>
-        ${this._colorPicker('major_ticks_color', 'Color')}
+        ${this._colorPicker('Color', this._config['major_ticks_color'] || '#ffffff', e => this._valueChanged('major_ticks_color', e))}
       </div>
 
       <!-- Medium ticks -->
@@ -724,6 +861,14 @@ class CustomCompassCardEditor extends LitElement {
         </div>
       </div>
       <div class="tick-styling-grid">
+        <div class="text-field">
+          <label>Position</label>
+          <cc-textfield
+            type="number" step="0.5"
+            .value=${String(c.minor_ticks_position)}
+            @input=${e => this._valueChanged('minor_ticks_position', e)}
+          ></cc-textfield>
+        </div>
         <div class="text-field">
           <label>Length</label>
           <cc-textfield
@@ -741,14 +886,14 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Position</label>
+          <label>Divisions</label>
           <cc-textfield
-            type="number" step="0.5"
-            .value=${String(c.minor_ticks_position)}
-            @input=${e => this._valueChanged('minor_ticks_position', e)}
+            type="number" step="1" min="1"
+            .value=${String(c.minor_ticks_divisions)}
+            @input=${e => this._valueChanged('minor_ticks_divisions', e)}
           ></cc-textfield>
         </div>
-        ${this._colorPicker('minor_ticks_color', 'Color')}
+        ${this._colorPicker('Color', this._config['minor_ticks_color'] || '#ffffff', e => this._valueChanged('minor_ticks_color', e))}
       </div>
 
       <!-- Micro ticks -->
@@ -762,6 +907,14 @@ class CustomCompassCardEditor extends LitElement {
         </div>
       </div>
       <div class="tick-styling-grid">
+        <div class="text-field">
+          <label>Position</label>
+          <cc-textfield
+            type="number" step="0.5"
+            .value=${String(c.micro_ticks_position)}
+            @input=${e => this._valueChanged('micro_ticks_position', e)}
+          ></cc-textfield>
+        </div>
         <div class="text-field">
           <label>Length</label>
           <cc-textfield
@@ -779,14 +932,14 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Position</label>
+          <label>Divisions</label>
           <cc-textfield
-            type="number" step="0.5"
-            .value=${String(c.micro_ticks_position)}
-            @input=${e => this._valueChanged('micro_ticks_position', e)}
+            type="number" step="1" min="1"
+            .value=${String(c.micro_ticks_divisions)}
+            @input=${e => this._valueChanged('micro_ticks_divisions', e)}
           ></cc-textfield>
         </div>
-        ${this._colorPicker('micro_ticks_color', 'Color')}
+        ${this._colorPicker('Color', this._config['micro_ticks_color'] || '#ffffff', e => this._valueChanged('micro_ticks_color', e))}
       </div>
 
       </ha-expansion-panel>
@@ -814,6 +967,14 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
+          <label>Position</label>
+          <cc-textfield
+            type="number" step="1"
+            .value=${String(c.header_position)}
+            @input=${e => this._valueChanged('header_position', e)}
+          ></cc-textfield>
+        </div>
+        <div class="text-field">
           <label>Font size</label>
           <cc-textfield
             type="number" step="0.1"
@@ -829,15 +990,7 @@ class CustomCompassCardEditor extends LitElement {
             @input=${e => this._valueChanged('header_fontweight', e)}
           ></cc-textfield>
         </div>
-        <div class="text-field">
-          <label>Position</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.header_position)}
-            @input=${e => this._valueChanged('header_position', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('header_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['header_fontcolor'] || '#ffffff', e => this._valueChanged('header_fontcolor', e))}
       </div>
 
       <!-- Footer -->
@@ -861,6 +1014,14 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
+          <label>Position</label>
+          <cc-textfield
+            type="number" step="1"
+            .value=${String(c.footer_position)}
+            @input=${e => this._valueChanged('footer_position', e)}
+          ></cc-textfield>
+        </div>
+        <div class="text-field">
           <label>Font size</label>
           <cc-textfield
             type="number" step="0.1"
@@ -876,15 +1037,7 @@ class CustomCompassCardEditor extends LitElement {
             @input=${e => this._valueChanged('footer_fontweight', e)}
           ></cc-textfield>
         </div>
-        <div class="text-field">
-          <label>Position</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.footer_position)}
-            @input=${e => this._valueChanged('footer_position', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('footer_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['footer_fontcolor'] || '#ffffff', e => this._valueChanged('footer_fontcolor', e))}
       </div>
 
       </ha-expansion-panel>
@@ -912,6 +1065,14 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
+          <label>Position (%)</label>
+          <cc-textfield
+            type="number" step="1"
+            .value=${String(c.field_1_position)}
+            @input=${e => this._valueChanged('field_1_position', e)}
+          ></cc-textfield>
+        </div>
+        <div class="text-field">
           <label>Font size</label>
           <cc-textfield
             type="number" step="0.1"
@@ -927,15 +1088,7 @@ class CustomCompassCardEditor extends LitElement {
             @input=${e => this._valueChanged('field_1_fontweight', e)}
           ></cc-textfield>
         </div>
-        <div class="text-field">
-          <label>Position (%)</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.field_1_position)}
-            @input=${e => this._valueChanged('field_1_position', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('field_1_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['field_1_fontcolor'] || '#ffffff', e => this._valueChanged('field_1_fontcolor', e))}
       </div>
       <div class="field-unit-grid">
         <div class="text-field">
@@ -946,7 +1099,7 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Size</label>
+          <label>Font size</label>
           <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_1_unit_fontsize)}
@@ -954,14 +1107,14 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Weight</label>
+          <label>Font weight</label>
           <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_1_unit_fontweight)}
             @input=${e => this._valueChanged('field_1_unit_fontweight', e)}
           ></cc-textfield>
         </div>
-        ${this._colorPicker('field_1_unit_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['field_1_unit_fontcolor'] || '#ffffff', e => this._valueChanged('field_1_unit_fontcolor', e))}
       </div>
 
 
@@ -986,6 +1139,14 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
+          <label>Position (%)</label>
+          <cc-textfield
+            type="number" step="1"
+            .value=${String(c.field_2_position)}
+            @input=${e => this._valueChanged('field_2_position', e)}
+          ></cc-textfield>
+        </div>
+        <div class="text-field">
           <label>Font size</label>
           <cc-textfield
             type="number" step="0.1"
@@ -1001,15 +1162,7 @@ class CustomCompassCardEditor extends LitElement {
             @input=${e => this._valueChanged('field_2_fontweight', e)}
           ></cc-textfield>
         </div>
-        <div class="text-field">
-          <label>Position (%)</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.field_2_position)}
-            @input=${e => this._valueChanged('field_2_position', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('field_2_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['field_2_fontcolor'] || '#ffffff', e => this._valueChanged('field_2_fontcolor', e))}
       </div>
       <div class="field-unit-grid">
         <div class="text-field">
@@ -1020,7 +1173,7 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Size</label>
+          <label>Font size</label>
           <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_2_unit_fontsize)}
@@ -1028,14 +1181,14 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Weight</label>
+          <label>Font weight</label>
           <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_2_unit_fontweight)}
             @input=${e => this._valueChanged('field_2_unit_fontweight', e)}
           ></cc-textfield>
         </div>
-        ${this._colorPicker('field_2_unit_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['field_2_unit_fontcolor'] || '#ffffff', e => this._valueChanged('field_2_unit_fontcolor', e))}
       </div>
 
 
@@ -1060,6 +1213,14 @@ class CustomCompassCardEditor extends LitElement {
       </div>
       <div class="field-styling-grid">
         <div class="text-field">
+          <label>Position (%)</label>
+          <cc-textfield
+            type="number" step="1"
+            .value=${String(c.field_3_position)}
+            @input=${e => this._valueChanged('field_3_position', e)}
+          ></cc-textfield>
+        </div>
+        <div class="text-field">
           <label>Font size</label>
           <cc-textfield
             type="number" step="0.1"
@@ -1075,15 +1236,7 @@ class CustomCompassCardEditor extends LitElement {
             @input=${e => this._valueChanged('field_3_fontweight', e)}
           ></cc-textfield>
         </div>
-        <div class="text-field">
-          <label>Position (%)</label>
-          <cc-textfield
-            type="number" step="1"
-            .value=${String(c.field_3_position)}
-            @input=${e => this._valueChanged('field_3_position', e)}
-          ></cc-textfield>
-        </div>
-        ${this._colorPicker('field_3_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['field_3_fontcolor'] || '#ffffff', e => this._valueChanged('field_3_fontcolor', e))}
       </div>
       <div class="field-unit-grid">
         <div class="text-field">
@@ -1094,7 +1247,7 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Size</label>
+          <label>Font size</label>
           <cc-textfield
             type="number" step="0.1"
             .value=${String(c.field_3_unit_fontsize)}
@@ -1102,14 +1255,14 @@ class CustomCompassCardEditor extends LitElement {
           ></cc-textfield>
         </div>
         <div class="text-field">
-          <label>Weight</label>
+          <label>Font weight</label>
           <cc-textfield
             type="number" step="100" min="100" max="900"
             .value=${String(c.field_3_unit_fontweight)}
             @input=${e => this._valueChanged('field_3_unit_fontweight', e)}
           ></cc-textfield>
         </div>
-        ${this._colorPicker('field_3_unit_fontcolor', 'Color')}
+        ${this._colorPicker('Color', this._config['field_3_unit_fontcolor'] || '#ffffff', e => this._valueChanged('field_3_unit_fontcolor', e))}
       </div>
 
       </ha-expansion-panel>
@@ -1132,6 +1285,74 @@ class CustomCompassCardEditor extends LitElement {
 
     ha-expansion-panel + ha-expansion-panel > *:first-child {
       margin-top: 24px;
+    }
+
+    .color-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .color-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+    }
+    .color-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background-color: var(--input-fill-color, #1e1e1e);
+      border-radius: 4px 4px 0 0;
+      padding-left: 8px;
+    }
+    .color-row input[type="color"] {
+      width: 24px;
+      height: 40px;
+      border: none;
+      border-radius: 4px 4px 0 0;
+      background: transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .color-row cc-textfield {
+      flex: 1;
+      --input-fill-color: transparent;
+    }
+
+    .text-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .text-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+    }
+
+    .toggle-field {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      align-items: center;
+    }
+    .toggle-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--secondary-text-color);
+    }
+    .toggle-hint {
+      font-size: 11px;
+      color: var(--disabled-text-color, #888);
+      margin-left: 6px;
+      font-style: italic;
+    }
+
+    cc-textfield {
+      display: block;
+      width: 100%;
     }
 
     .compass-styling-grid {
@@ -1166,6 +1387,22 @@ class CustomCompassCardEditor extends LitElement {
       align-items: end;
     }
 
+    .rotate-compass-toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 28px;
+      margin-bottom: 16px;
+    }
+
+    .needle-name-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+
     .needle-toggles-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -1184,7 +1421,7 @@ class CustomCompassCardEditor extends LitElement {
 
     .needle-color-grid {
       display: grid;
-      grid-template-columns: 7fr 4fr 7fr 4fr;
+      grid-template-columns: 7fr 3fr 7fr 3fr;
       gap: 8px;
       margin-top: 24px;
       margin-bottom: 8px;
@@ -1195,14 +1432,6 @@ class CustomCompassCardEditor extends LitElement {
       grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
       gap: 8px;
       margin-top: 8px;
-      margin-bottom: 16px;
-    }
-
-    .rotate-compass-toggle-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      margin-top: 28px;
       margin-bottom: 16px;
     }
 
@@ -1230,6 +1459,82 @@ class CustomCompassCardEditor extends LitElement {
       align-items: end;
     }
 
+    .marker-remove-grid {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+
+    .marker-remove-btn {
+      background: none;
+      border: none;
+      color: var(--error-color, #db4437);
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: inherit;
+      letter-spacing: 0.0892857em;
+      text-transform: uppercase;
+      height: 36px;
+      padding: 0 8px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .marker-remove-btn:hover {
+      background: rgba(219, 68, 55, 0.08);
+    }
+
+    .marker-add-grid {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+
+    .marker-add-btn {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: inherit;
+      letter-spacing: 0.0892857em;
+      text-transform: uppercase;
+      height: 36px;
+      padding: 0 8px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .marker-add-btn:hover {
+      background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.08);
+    }
+
+    .marker-toggles-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+
+    .marker-template-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .marker-styling-grid {
+      display: grid;
+      grid-template-columns: 3fr 3fr 3fr 5fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      align-items: end;
+    }
+
     .tick-toggles-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -1246,9 +1551,18 @@ class CustomCompassCardEditor extends LitElement {
       margin-bottom: 8px;
     }
 
-    .tick-styling-grid {
+    .cardinals-styling-grid {
       display: grid;
       grid-template-columns: 2fr 2fr 2fr 3fr;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      align-items: end;
+    }
+
+    .tick-styling-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr 2fr;
       gap: 8px;
       margin-top: 8px;
       margin-bottom: 8px;
@@ -1281,102 +1595,12 @@ class CustomCompassCardEditor extends LitElement {
 
     .field-unit-grid {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 2fr;
-      gap: 8px;
-      margin-top: 8px;
-      align-items: end;
-    }
-
-    .marker-toggles-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      margin-top: 28px;
-      margin-bottom: 16px;
-    }
-
-    .marker-template-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .marker-styling-grid {
-      display: grid;
       grid-template-columns: 2fr 2fr 2fr 3fr;
       gap: 8px;
       margin-top: 8px;
-      margin-bottom: 8px;
       align-items: end;
     }
 
-    .text-field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .text-field label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--secondary-text-color);
-    }
-
-    .toggle-field {
-      display: flex;
-      flex-direction: row;
-      gap: 4px;
-      align-items: center;
-    }
-    .toggle-field label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--secondary-text-color);
-      min-width: 98px;
-    }
-    .toggle-hint {
-      font-size: 11px;
-      color: var(--disabled-text-color, #888);
-      margin-left: 6px;
-      font-style: italic;
-    }
-
-    .color-field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .color-field label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--secondary-text-color);
-    }
-    .color-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      background-color: var(--input-fill-color, #1e1e1e);
-      border-radius: 4px 4px 0 0;
-      padding-left: 8px;
-    }
-    .color-row input[type="color"] {
-      width: 24px;
-      height: 40px;
-      border: none;
-      border-radius: 4px 4px 0 0;
-      background: transparent;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    .color-row cc-textfield {
-      flex: 1;
-      --input-fill-color: transparent;
-    }
-
-    cc-textfield {
-      display: block;
-      width: 100%;
-    }
   `;
 }
 
@@ -1387,34 +1611,33 @@ class CustomCompassCard extends LitElement {
   static properties = {
     hass:          { type: Object },
     config:        { type: Object },
-    _degrees:      { type: Number },
+    _needleDegrees:         { type: Array },
     _field1Value:  { type: String },
     _field2Value:  { type: String },
     _field3Value:  { type: String },
     _headerValue:  { type: String },
     _footerValue:  { type: String },
-    _marker1Degrees:        { type: Number },
-    _marker2Degrees:        { type: Number },
+    _markerDegrees:         { type: Array },
     _backgroundImageUrl:    { type: String },
-    _needleImageUrl:        { type: String },
+    _needleImageUrls:       { type: Array },
     _error:                 { type: Boolean },
   };
 
   constructor() {
     super();
-    this._degrees             = 0;
-    this._prevDegrees         = null;
+    this._needleDegrees       = [];
+    this._needlePrevDegrees   = [];   // non-reactive, for shortest-arc tracking
     this._templateUnsubs      = [];
     this._subscriptionsActive = false;
+    this._scale               = 1;
     this._field1Value         = '';
     this._field2Value         = '';
     this._field3Value         = '';
     this._headerValue         = '';
     this._footerValue         = '';
-    this._marker1Degrees      = 0;
-    this._marker2Degrees      = 0;
+    this._markerDegrees       = [];
     this._backgroundImageUrl  = '';
-    this._needleImageUrl      = '';
+    this._needleImageUrls     = [];
     this._error               = false;
   }
 
@@ -1432,6 +1655,25 @@ class CustomCompassCard extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this._teardownSubscriptions();
+  }
+
+  willUpdate(changedProperties) {
+    super.willUpdate(changedProperties);
+    if (!this.config) return;
+    // Seed needle degrees from cache before first render after element recreation.
+    // This runs synchronously before Lit renders, so needle never appears at 0.
+    if (this._needleDegrees.length === 0) {
+      const key = this._cacheKey();
+      const cached = _needleDegreesCache.get(key);
+      if (cached) {
+        this._needleDegrees     = [...cached.degrees];
+        this._needlePrevDegrees = [...cached.prevDegrees];
+      }
+    }
+  }
+
+  _cacheKey() {
+    return (this.config.needles || []).map(n => n.template).join('|');
   }
 
   updated(changedProperties) {
@@ -1463,28 +1705,42 @@ class CustomCompassCard extends LitElement {
       this._templateUnsubs.push(unsub);
     };
 
-    // Compass bearing
-    const compassCallback = (result) => {
-      const raw = parseFloat(result);
-      if (!isNaN(raw)) {
-        const targetNormalized = ((raw % 360) + 360) % 360;
-        if (targetNormalized !== this._prevDegrees) {
-          const currentMod = ((this._degrees % 360) + 360) % 360;
-          let delta = targetNormalized - currentMod;
-          if (delta > 180) delta -= 360;
-          if (delta < -180) delta += 360;
-          this._degrees     = this._degrees + delta;
-          this._prevDegrees = targetNormalized;
+    // Needle bearings — one subscription per needle
+    this._needleDegrees     = [];
+    this._needlePrevDegrees = [];
+    (this.config.needles || []).forEach((needle, i) => {
+      sub(needle.template, (result) => {
+        const raw = parseFloat(result);
+        if (!isNaN(raw)) {
+          const targetNormalized = ((raw % 360) + 360) % 360;
+          const prev    = this._needlePrevDegrees[i] ?? null;
+          const current = this._needleDegrees[i]     ?? 0;
+          if (targetNormalized !== prev) {
+            const currentMod = ((current % 360) + 360) % 360;
+            let delta = targetNormalized - currentMod;
+            if (delta > 180)  delta -= 360;
+            if (delta < -180) delta += 360;
+            const newDegrees = [...this._needleDegrees];
+            newDegrees[i] = current + delta;
+            this._needleDegrees = newDegrees;
+            this._needlePrevDegrees[i] = targetNormalized;
+            // Keep cache current so willUpdate can restore on recreation
+            _needleDegreesCache.set(this._cacheKey(), {
+              degrees:     [...newDegrees],
+              prevDegrees: [...this._needlePrevDegrees],
+            });
+          }
+          if (i === 0) this._error = false;
+        } else {
+          const newDegrees = [...this._needleDegrees];
+          newDegrees[i] = 0;
+          this._needleDegrees = newDegrees;
+          this._needlePrevDegrees[i] = null;
+          if (i === 0) this._error = true;
         }
-        this._error = false;
-      } else {
-        this._degrees     = 0;
-        this._prevDegrees = null;
-        this._error       = true;
-      }
-      this._updateCompassDirectionFields();
-    };
-    sub(this.config.needle_template, compassCallback);
+        if (i === 0) this._updateCompassDirectionFields();
+      });
+    });
 
     // Custom fields
     for (const def of this._fieldDefs) {
@@ -1493,7 +1749,7 @@ class CustomCompassCard extends LitElement {
       // Template sent to HA untouched — ${compass_direction} is literal text to HA,
       // only the {{ }} parts are evaluated. Replacement happens in the callback.
       sub(String(def.template), (result) => {
-        this[`_field${idx}Value`] = String(result).replace('${compass_direction}', this.getCompassDirection(this._degrees));
+        this[`_field${idx}Value`] = String(result).replace('${compass_direction}', this.getCompassDirection(this._needleDegrees[0] ?? 0));
       });
     }
 
@@ -1507,36 +1763,47 @@ class CustomCompassCard extends LitElement {
     } else { this._footerValue = ''; }
 
     // Marker degrees
-    for (const m of [
-      { key: 'marker_1_degrees', prop: '_marker1Degrees' },
-      { key: 'marker_2_degrees', prop: '_marker2Degrees' },
-    ]) {
-      sub(this.config[m.key], (result) => {
-        this[m.prop] = ((parseFloat(result) % 360) + 360) % 360;
+    this._markerDegrees = [];
+    (this.config.markers || []).forEach((m, i) => {
+      sub(m.degrees, (result) => {
+        const newDegrees = [...this._markerDegrees];
+        newDegrees[i] = ((parseFloat(result) % 360) + 360) % 360;
+        this._markerDegrees = newDegrees;
       });
-    }
+    });
 
     // Background image URL
     if (this.config.background_image_show) {
       sub(this.config.background_image_url, (result) => { this._backgroundImageUrl = result; });
     } else { this._backgroundImageUrl = ''; }
 
-    // Needle image URL
-    if (this.config.needle_image_show) {
-      sub(this.config.needle_image_url, (result) => { this._needleImageUrl = result; });
-    } else { this._needleImageUrl = ''; }
+    // Needle image URLs — one subscription per needle
+    this._needleImageUrls = [];
+    (this.config.needles || []).forEach((needle, i) => {
+      if (needle.image_show) {
+        sub(needle.image_url, (result) => {
+          const newUrls = [...this._needleImageUrls];
+          newUrls[i] = result;
+          this._needleImageUrls = newUrls;
+        });
+      } else {
+        const newUrls = [...this._needleImageUrls];
+        newUrls[i] = '';
+        this._needleImageUrls = newUrls;
+      }
+    });
   }
 
   // Called from the bearing callback whenever _degrees changes.
   // Handles fields whose template is a plain string containing ${compass_direction}.
   // Mixed templates (${compass_direction} + Jinja2) are handled by their HA callback.
   _updateCompassDirectionFields() {
-    const direction = this.getCompassDirection(this._degrees);
+    const direction = this.getCompassDirection(this._needleDegrees[0] ?? 0);
     for (const def of this._fieldDefs) {
       if (!def.show) continue;
       const tmpl = String(def.template);
       if (!tmpl.includes('${compass_direction}')) continue;
-      if (tmpl.includes('{{')) continue; // mixed case — HA callback handles it
+      if (tmpl.includes('{{')) continue;
       this[`_field${def.index}Value`] = tmpl.replace('${compass_direction}', direction);
     }
   }
@@ -1564,24 +1831,17 @@ class CustomCompassCard extends LitElement {
 
     const BASE_DESIGN_WIDTH = 120;
     const actualWidth = circle.offsetWidth;
-    const scale       = actualWidth / BASE_DESIGN_WIDTH;
+    this._scale = actualWidth / BASE_DESIGN_WIDTH;
 
     this.style.setProperty('--cc-font-size', `${actualWidth * 0.08}px`);
 
     const initBorder = parseFloat(this.config.bezel_width);
     const borderSize = parseFloat(this.config.bezel_size);
-    this.style.setProperty('--cc-circle-border-width', `${initBorder * scale}px`);
+    this.style.setProperty('--cc-circle-border-width', `${initBorder * this._scale}px`);
     this.style.setProperty('--cc-circle-color',        this.config.bezel_color);
     this.style.setProperty('--cc-bg-color',            this.config.background_color);
-    this.style.setProperty('--cc-border-size',         `${borderSize}px`);
-
-    const initW   = parseFloat(this.config.needle_width);
-    const initH   = parseFloat(this.config.needle_height);
-    const initPos = parseFloat(this.config.needle_position);
-
-    this.style.setProperty('--cc-needle-width',    `${initW   * scale}px`);
-    this.style.setProperty('--cc-needle-height',   `${initH   * scale}px`);
-    this.style.setProperty('--cc-needle-position', `${initPos * scale}px`);
+    const borderScale = this.offsetWidth / BASE_DESIGN_WIDTH;
+    this.style.setProperty('--cc-border-size',         `${borderSize * borderScale}px`);
 
     this.style.setProperty('--cc-animation-duration', `${this.config.rotation_animation_time}s`);
 
@@ -1685,83 +1945,100 @@ class CustomCompassCard extends LitElement {
     };
   }
 
-  _renderTicks(ticksTransform = 'none') {
+  _renderTicks() {
     const c   = this.config;
     const cx  = 50, cy = 50, r = 50;
 
     const cardinals   = [c.cardinal_north, c.cardinal_east, c.cardinal_south, c.cardinal_west];
-    const cardinalIdx = [0, 4, 8, 12];
 
-    const tickDefs = {
-      major: { show: c.major_ticks_show, length: c.major_ticks_length, width: c.major_ticks_width, color: c.major_ticks_color, position: c.major_ticks_position || 0, cardinals: c.cardinals_show, cardinal_color: c.cardinals_fontcolor, cardinal_fontsize: c.cardinals_fontsize, cardinal_fontweight: c.cardinals_fontweight, cardinal_position: c.cardinals_position || 0 },
-      minor: { show: c.minor_ticks_show, length: c.minor_ticks_length, width: c.minor_ticks_width, color: c.minor_ticks_color, position: c.minor_ticks_position || 0, cardinals: false },
-      micro: { show: c.micro_ticks_show, length: c.micro_ticks_length, width: c.micro_ticks_width, color: c.micro_ticks_color, position: c.micro_ticks_position || 0, cardinals: false },
-    };
+    // Build tick positions for each tier using configurable divisions
+    const tierDefs = [
+      { key: 'major', show: c.major_ticks_show, divisions: parseInt(c.major_ticks_divisions) || 4,  length: c.major_ticks_length, width: c.major_ticks_width, color: c.major_ticks_color, position: c.major_ticks_position || 0 },
+      { key: 'minor', show: c.minor_ticks_show, divisions: parseInt(c.minor_ticks_divisions) || 8,  length: c.minor_ticks_length, width: c.minor_ticks_width, color: c.minor_ticks_color, position: c.minor_ticks_position || 0 },
+      { key: 'micro', show: c.micro_ticks_show, divisions: parseInt(c.micro_ticks_divisions) || 16, length: c.micro_ticks_length, width: c.micro_ticks_width, color: c.micro_ticks_color, position: c.micro_ticks_position || 0 },
+    ];
 
-    const ticks = Array.from({ length: 16 }, (_, i) => {
-      const size     = i % 4 === 0 ? 'major' : i % 2 === 0 ? 'minor' : 'micro';
-      const def      = tickDefs[size];
-      const show     = def.show;
-      const length   = parseFloat(def.length);
-      const width    = parseFloat(def.width);
-      const color    = def.color;
-      const position = parseFloat(def.position);
-      const angle    = (i * 22.5) * Math.PI / 180;
-      const sinA     = Math.sin(angle);
-      const cosA     = Math.cos(angle);
+    // Collect all occupied angles from higher-priority tiers (rounded to 0.1 deg)
+    const round1 = (v) => Math.round(v * 10) / 10;
+    const occupied = new Set();
 
-      // Cardinal label for major ticks
-      if (def.cardinals) {
-        const cardinalIndex = cardinalIdx.indexOf(i);
-        const letter = cardinals[cardinalIndex];
-        const tx = cx + (r + def.cardinal_position) * sinA;
-        const ty = cy - (r + def.cardinal_position) * cosA;
-        const offset = def.cardinal_fontsize * 0.85;
-        const lx = tx - offset * sinA;
-        const ly = ty + offset * cosA;
-        return { show: true, type: 'text', x: lx, y: ly, letter, fontSize: def.cardinal_fontsize, fontWeight: def.cardinal_fontweight, color: def.cardinal_color };
+    const ticks = [];
+
+    tierDefs.forEach((tier) => {
+      const step = 360 / tier.divisions;
+      for (let i = 0; i < tier.divisions; i++) {
+        const angleDeg = round1(i * step);
+        if (occupied.has(angleDeg)) continue;
+        occupied.add(angleDeg);
+
+        // Cardinal labels on major tier at 0/90/180/270 — independent of major_ticks_show
+        if (tier.key === 'major' && c.cardinals_show) {
+          const cardinalAngles = [0, 90, 180, 270];
+          const cardinalIdx = cardinalAngles.indexOf(angleDeg);
+          if (cardinalIdx !== -1) {
+            const angleRad = angleDeg * Math.PI / 180;
+            const sinA     = Math.sin(angleRad);
+            const cosA     = Math.cos(angleRad);
+            const tx       = cx + (r + (c.cardinals_position || 0)) * sinA;
+            const ty       = cy - (r + (c.cardinals_position || 0)) * cosA;
+            const offset   = c.cardinals_fontsize * 0.85;
+            const lx       = tx - offset * sinA;
+            const ly       = ty + offset * cosA;
+            ticks.push({ type: 'text', x: lx, y: ly, letter: cardinals[cardinalIdx], fontSize: c.cardinals_fontsize, fontWeight: c.cardinals_fontweight, color: c.cardinals_fontcolor });
+          }
+        }
+
+        if (!tier.show) continue;
+
+        const angleRad = angleDeg * Math.PI / 180;
+        const sinA     = Math.sin(angleRad);
+        const cosA     = Math.cos(angleRad);
+        const length   = parseFloat(tier.length);
+        const width    = parseFloat(tier.width);
+        const position = parseFloat(tier.position);
+
+        const x1 = cx + (r + position)          * sinA;
+        const y1 = cy - (r + position)          * cosA;
+        const x2 = cx + (r + position - length) * sinA;
+        const y2 = cy - (r + position - length) * cosA;
+        ticks.push({ type: 'line', x1, y1, x2, y2, color: tier.color, width });
       }
-
-      const x1 = cx + (r + position)          * sinA;
-      const y1 = cy - (r + position)          * cosA;
-      const x2 = cx + (r + position - length) * sinA;
-      const y2 = cy - (r + position - length) * cosA;
-      return { show, type: 'line', x1, y1, x2, y2, color, width };
     });
 
-    // Build marker triangles — inverted triangle pointing inward at a fixed bearing
-    const markerDefs = [
-      { show: c.marker_1_show, degrees: this._marker1Degrees, length: parseFloat(c.marker_1_length), width: parseFloat(c.marker_1_width), position: parseFloat(c.marker_1_position), color: c.marker_1_color },
-      { show: c.marker_2_show, degrees: this._marker2Degrees, length: parseFloat(c.marker_2_length), width: parseFloat(c.marker_2_width), position: parseFloat(c.marker_2_position), color: c.marker_2_color },
-    ];
+    // Build marker triangles
+    const markerDefs = (c.markers || []).map((m, i) => ({
+      show:     m.show,
+      degrees:  this._markerDegrees[i] ?? 0,
+      height:   parseFloat(m.height),
+      width:    parseFloat(m.width),
+      position: parseFloat(m.position),
+      color:    m.color,
+      flip:     m.flip,
+    }));
 
     const markers = markerDefs.map(m => {
       if (!m.show) return null;
       const angle  = m.degrees * Math.PI / 180;
       const sinA   = Math.sin(angle);
       const cosA   = Math.cos(angle);
-      // Tip: on the bezel edge + position offset
       const tipR   = r + m.position;
-      const tx     = cx + tipR * sinA;
-      const ty     = cy - tipR * cosA;
-      // Base: outward from tip by length
-      const baseR  = tipR + m.length;
-      const baseCx = cx + baseR * sinA;
-      const baseCy = cy - baseR * cosA;
-      // Base corners: perpendicular to radial direction, ±width/2
+      const baseR  = tipR + m.height;
+      const tipCx  = cx + (m.flip ? baseR : tipR)  * sinA;
+      const tipCy  = cy - (m.flip ? baseR : tipR)  * cosA;
+      const baseCx = cx + (m.flip ? tipR  : baseR) * sinA;
+      const baseCy = cy - (m.flip ? tipR  : baseR) * cosA;
       const half   = m.width / 2;
       const b1x    = baseCx + half * cosA;
       const b1y    = baseCy + half * sinA;
       const b2x    = baseCx - half * cosA;
       const b2y    = baseCy - half * sinA;
-      return { color: m.color, path: `M ${tx},${ty} L ${b1x},${b1y} L ${b2x},${b2y} Z` };
+      return { color: m.color, path: `M ${tipCx},${tipCy} L ${b1x},${b1y} L ${b2x},${b2y} Z` };
     }).filter(Boolean);
 
     return html`
-      <div class="compass-ticks-wrapper" style="transform:${ticksTransform}">
+      <div class="compass-ticks-wrapper">
         <svg class="compass-ticks" viewBox="0 0 100 100" preserveAspectRatio="none">
           ${ticks.map(t => {
-            if (!t.show) return '';
             if (t.type === 'text') return svg`
               <text
                 x="${t.x}" y="${t.y}"
@@ -1794,18 +2071,13 @@ class CustomCompassCard extends LitElement {
   }
 
   render() {
-    const c = this.config || {};
+    const c       = this.config || {};
+    const needles = c.needles || [];
+    const scale   = this._scale || 1;
 
-    // Rotation: in compass_rotate mode the dial spins and the needle stays north;
-    // in normal mode the needle rotates and the dial stays fixed.
-    let needleTransform, ticksTransform;
-    if (c.compass_rotate) {
-      ticksTransform  = `rotate(${-this._degrees}deg)`;
-      needleTransform = `rotate(${c.needle_rotate ? 180 : 0}deg)`;
-    } else {
-      ticksTransform  = 'none';
-      needleTransform = `rotate(${c.needle_rotate ? this._degrees + 180 : this._degrees}deg)`;
-    }
+    // compass_rotate: compute the rotation that puts needle 1 at north
+    const needle0Degrees  = this._needleDegrees[0] ?? 0;
+    const compassRotation = c.compass_rotate ? -needle0Degrees : 0;
 
     const fieldDefs = [
       { index: 1, show: c.field_1_show, unit: c.field_1_unit, fontsize: parseFloat(c.field_1_fontsize), fontweight: c.field_1_fontweight, position: c.field_1_position, fontcolor: c.field_1_fontcolor, unit_fontsize: parseFloat(c.field_1_unit_fontsize), unit_fontweight: c.field_1_unit_fontweight, unit_fontcolor: c.field_1_unit_fontcolor },
@@ -1822,20 +2094,60 @@ class CustomCompassCard extends LitElement {
       `;
     };
 
-    // Build needle path (invert and position handled inside)
-    const morph    = parseFloat(c.needle_morph);
-    const curve    = parseFloat(c.needle_curve);
-    const position = parseFloat(c.needle_position);
-    const pathData = this._buildNeedlePath(morph, curve, c.needle_invert, position);
+    // Build and render each needle
+    const renderNeedle = (needle, i) => {
+      if (!needle.show) return html``;
+      const degrees   = this._needleDegrees[i] ?? 0;
+      const rotation  = needle.rotate ? degrees + 180 : degrees;
+      const pathData  = this._buildNeedlePath(parseFloat(needle.morph), parseFloat(needle.curve), needle.invert, parseFloat(needle.position));
+      const { minX, minY, maxX, maxY } = pathData.bounds;
+      const viewBox   = `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
+      const w         = parseFloat(needle.width)    * scale;
+      const h         = parseFloat(needle.height)   * scale;
+      const pos       = parseFloat(needle.position) * scale;
+      const gradId    = `needleGradient-${i}`;
+      const clipId    = `needleClip-${i}`;
+      const imageUrl  = this._needleImageUrls[i] || '';
+      const g1        = needle.invert ? needle.color_2     : needle.color_1;
+      const g1pos     = needle.invert ? 100 - parseFloat(needle.color_2_pos) : parseFloat(needle.color_1_pos);
+      const g2        = needle.invert ? needle.color_1     : needle.color_2;
+      const g2pos     = needle.invert ? 100 - parseFloat(needle.color_1_pos) : parseFloat(needle.color_2_pos);
 
-    const { minX, minY, maxX, maxY } = pathData.bounds;
-    const viewBox = `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
-
-    // Gradient stops — swap colors when needle is inverted so gradient follows the shape
-    const g1    = c.needle_invert ? c.needle_color_2     : c.needle_color_1;
-    const g1pos = c.needle_invert ? 100 - parseFloat(c.needle_color_2_pos) : parseFloat(c.needle_color_1_pos);
-    const g2    = c.needle_invert ? c.needle_color_1     : c.needle_color_2;
-    const g2pos = c.needle_invert ? 100 - parseFloat(c.needle_color_1_pos) : parseFloat(c.needle_color_2_pos);
+      return html`
+        <div class="compass-needle-wrapper" style="transform:rotate(${rotation}deg)">
+          <svg class="compass-needle"
+               style="width:${w}px; height:${h}px; top:calc(0px - ${pos}px);"
+               viewBox="${viewBox}"
+               preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"        stop-color="${g1}" />
+                <stop offset="${g1pos}%" stop-color="${g1}" />
+                <stop offset="${g2pos}%" stop-color="${g2}" />
+                <stop offset="100%"      stop-color="${g2}" />
+              </linearGradient>
+              ${needle.image_show && imageUrl ? svg`
+                <clipPath id="${clipId}">
+                  <path d="${pathData.path}" />
+                </clipPath>
+              ` : ''}
+            </defs>
+            ${needle.image_show && imageUrl ? svg`
+              <image
+                href="${imageUrl}"
+                x="${minX}" y="${minY}"
+                width="${maxX - minX}" height="${maxY - minY}"
+                preserveAspectRatio="xMidYMid slice"
+                clip-path="url(#${clipId})"
+                transform="translate(${(maxX + minX) / 2}, ${(maxY + minY) / 2}) rotate(${needle.image_rotate}) scale(${needle.image_scale / 100}) translate(${needle.image_x}, ${needle.image_y}) translate(${-(maxX + minX) / 2}, ${-(maxY + minY) / 2})"
+              />
+            ` : svg`
+              <path d="${pathData.path}" fill="url(#${gradId})" />
+            `}
+          </svg>
+        </div>
+      `;
+    };
 
     return html`
       <ha-card>
@@ -1856,39 +2168,9 @@ class CustomCompassCard extends LitElement {
             ${renderField(fieldDefs[1], this._field2Value)}
             ${renderField(fieldDefs[2], this._field3Value)}
           </div>
-          ${this._renderTicks(ticksTransform)}
-          <div class="compass-needle-wrapper" style="transform:${needleTransform}">
-            ${c.needle_show ? html`
-              <svg class="compass-needle"
-                   viewBox="${viewBox}"
-                   preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="needleGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"        stop-color="${g1}" />
-                    <stop offset="${g1pos}%" stop-color="${g1}" />
-                    <stop offset="${g2pos}%" stop-color="${g2}" />
-                    <stop offset="100%"      stop-color="${g2}" />
-                  </linearGradient>
-                  ${c.needle_image_show && this._needleImageUrl ? svg`
-                    <clipPath id="needleClip">
-                      <path d="${pathData.path}" />
-                    </clipPath>
-                  ` : ''}
-                </defs>
-                ${c.needle_image_show && this._needleImageUrl ? svg`
-                  <image
-                    href="${this._needleImageUrl}"
-                    x="${minX}" y="${minY}"
-                    width="${maxX - minX}" height="${maxY - minY}"
-                    preserveAspectRatio="xMidYMid slice"
-                    clip-path="url(#needleClip)"
-                    transform="translate(${(maxX + minX) / 2}, ${(maxY + minY) / 2}) rotate(${c.needle_image_rotate}) scale(${c.needle_image_scale / 100}) translate(${c.needle_image_x}, ${c.needle_image_y}) translate(${-(maxX + minX) / 2}, ${-(maxY + minY) / 2})"
-                  />
-                ` : svg`
-                  <path d="${pathData.path}" fill="url(#needleGradient)" />
-                `}
-              </svg>
-            ` : ''}
+          <div class="compass-rotate-wrapper" style="transform:rotate(${compassRotation}deg)">
+            ${this._renderTicks()}
+            ${[...needles].reverse().map((n, ri) => renderNeedle(n, needles.length - 1 - ri))}
           </div>
         </div>
         ${c.footer_show ? html`
@@ -1958,6 +2240,11 @@ class CustomCompassCard extends LitElement {
       pointer-events: none;
       z-index: 0;
     }
+    .compass-rotate-wrapper {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      transition: transform var(--cc-animation-duration, 0.3s) ease-out;
+    }
     .compass-ticks-wrapper {
       position: absolute;
       top:    calc(8% - var(--cc-border-size, 0px));
@@ -1969,7 +2256,6 @@ class CustomCompassCard extends LitElement {
       align-items: center;
       z-index: 1;
       pointer-events: none;
-      transition: transform var(--cc-animation-duration, 0.3s) ease-out;
     }
     .compass-ticks {
       position: absolute;
@@ -1991,9 +2277,6 @@ class CustomCompassCard extends LitElement {
     }
     .compass-needle {
       position: absolute;
-      width:  var(--cc-needle-width,  6px);
-      height: var(--cc-needle-height, 32px);
-      top:    calc(0px - var(--cc-needle-position, 0px));
     }
     .field {
       position: absolute;
