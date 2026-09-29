@@ -11,3 +11,17 @@ release.bat
 release-notes.md
 set_version.py
 
+
+# Never push these (cleanup 2026-09-29)
+*.zip
+*.bat
+*.psd
+*.ai
+*.log
+__pycache__/
+*.pyc
+
+# Removed from repo in cleanup 2026-09-29 (unused artwork, old files)
+/www/bigearth.png
+/www/earth.jpg
+/www/marble.png
